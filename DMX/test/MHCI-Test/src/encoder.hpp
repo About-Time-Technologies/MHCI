@@ -5,7 +5,7 @@
 
 #define SS_SWITCH 24
 #define SS_NEOPIX 6
-#define SEESAW_BASE_ADDR          0x36 
+#define SEESAW_BASE_ADDR          0x36
 
 enum EncoderMode {
     RAW,
@@ -47,15 +47,19 @@ class Encoder {
         return found;
     }
 
-    bool updateEncoder() {
+    bool update() {
         if (!found) return false;
 
         // Check for encoder switch press
+        bool oldSwitchPressed = switchPressed;
         switchPressed = hardwareEncoder.digitalRead(SS_SWITCH);
+        if (switchPressed != oldSwitchPressed) { stateChanged = true; } // State changed if the switch state is different from the last read
 
         // Read the encoder value and delta
         
+        int32_t oldEncoderDelta = encoderDelta;
         encoderDelta = hardwareEncoder.getEncoderDelta();
+        if (encoderDelta != oldEncoderDelta) { stateChanged = true; } // State changed if the encoder delta is different from the last read
 
         if (switchPressed) {
             encoderDelta *= switchScale; // Scale the delta by the switch scale factor
@@ -79,8 +83,7 @@ class Encoder {
         return true;
     }
 
-    int32_t getValue() {
-        updateEncoder();
+    int32_t getMappedValue() {
 
         switch (mode)
         {
@@ -105,7 +108,11 @@ class Encoder {
         return encoderVal;
     }
 
-
+    bool getAndClearStateChanged() {
+        bool state = stateChanged;
+        stateChanged = false;
+        return state;
+    }
 
 private:
     Adafruit_seesaw hardwareEncoder;
@@ -125,4 +132,5 @@ private:
     int32_t outputMin;
     int32_t outputMax;
 
+    bool stateChanged = false;
 };

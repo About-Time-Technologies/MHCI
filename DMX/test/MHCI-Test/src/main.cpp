@@ -30,9 +30,6 @@ unsigned long lastDmxUpdate = millis(); // Last DMX update time
 
 void setup() {
   Serial.begin(115200);
-  // while (!Serial) {
-  //   delay(10); // Wait for serial port to connect. Needed for native USB port only
-  // }
 
   Wire.begin(SDA_PIN, SCL_PIN); // SDA, SCL pins for ESP32
 
@@ -53,8 +50,6 @@ void setup() {
 
   display.clearDisplay();
   display.display();
-
-
 }
 
 void updateDisplay(uint8_t fan, float haze) {
@@ -82,16 +77,19 @@ void sendDMX(uint8_t fan, uint8_t haze) {
   dmxData[1] = fan;
   dmxData[2] = haze;
 
-
   dmx_write(dmx_port, dmxData, DMX_PACKET_SIZE); // Write DMX data to the buffer
 
   dmx_send(dmx_port);
   dmx_wait_sent(dmx_port, DMX_TIMEOUT_TICK); // Wait for DMX data to be sent
 }
 
-
 void loop() {
-  updateDisplay(uint8_t(fan.getValue()), float(haze.getValue()) / 1000.0);
+  fan.update();
+  haze.update();
+
+  if(fan.getAndClearStateChanged() || haze.getAndClearStateChanged()) {
+    updateDisplay(uint8_t(fan.getMappedValue()), float(haze.getMappedValue()) / 1000.0);
+  }
 
   sendDMX(uint8_t(fan.getRawValue()), uint8_t(haze.getRawValue()));
 }
