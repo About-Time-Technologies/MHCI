@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <Adafruit_seesaw.h>
 #include <seesaw_neopixel.h>
+#include <VirtualButton/virtualbutton.hpp>
 
 #define SS_SWITCH 24
 #define SS_NEOPIX 6
@@ -51,17 +52,15 @@ class Encoder {
         if (!found) return false;
 
         // Check for encoder switch press
-        bool oldSwitchPressed = switchPressed;
-        switchPressed = hardwareEncoder.digitalRead(SS_SWITCH);
-        if (switchPressed != oldSwitchPressed) { stateChanged = true; } // State changed if the switch state is different from the last read
-
+        encoderButton.setState(!hardwareEncoder.digitalRead(SS_SWITCH), millis()); // Invert the switch state for button logic
+  
         // Read the encoder value and delta
         
         int32_t oldEncoderDelta = encoderDelta;
         encoderDelta = hardwareEncoder.getEncoderDelta();
-        if (encoderDelta != oldEncoderDelta) { stateChanged = true; } // State changed if the encoder delta is different from the last read
+        if (encoderDelta != oldEncoderDelta) { encoderStateChanged = true; } // State changed if the encoder delta is different from the last read
 
-        if (switchPressed) {
+        if (!encoderButton.getState()) {
             encoderDelta *= switchScale; // Scale the delta by the switch scale factor
         }
         encoderVal += encoderDelta;
@@ -108,10 +107,19 @@ class Encoder {
         return encoderVal;
     }
 
-    bool getAndClearStateChanged() {
-        bool state = stateChanged;
-        stateChanged = false;
+    bool getAndClearEncoderState() {
+        bool state = encoderStateChanged;
+        encoderStateChanged = false;
         return state;
+    }
+
+    bool getButtonState() const {
+        return encoderButton.getState();
+    }
+
+    ButtonEvent getButtonEvent() {
+        encoderButton.update(millis()); // Update the button state based on the current time
+        return encoderButton.getLastEvent();
     }
 
 private:
@@ -121,7 +129,6 @@ private:
 
     int32_t encoderVal = 0;
     int32_t encoderDelta = 0;
-    bool switchPressed = false;
     uint8_t switchScale;
 
     EncoderMode mode;
@@ -132,5 +139,7 @@ private:
     int32_t outputMin;
     int32_t outputMax;
 
-    bool stateChanged = false;
+    bool encoderStateChanged = false;
+
+    VirtualButton encoderButton;
 };
