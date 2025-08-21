@@ -12,8 +12,9 @@
 #include <Wire.h>
 #include <string>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Adafruit_SH110X.h>
+//#include <Adafruit_SSD1306.h>
+//#include <Adafruit_SH110X.h>
+#include <Adafruit_SSD1327.h>
 #include <encoder.hpp>
 #include <esp_dmx.h>
 #include <dmx/include/service.h>
@@ -22,7 +23,7 @@
 #include <Timeout/timeout.hpp>
 
 Timeout rdmUpdate(5000);
-Timeout displayUpdate(1000);
+Timeout displayUpdate(250);
 bool displayUpdateRequired = false;
 std::string hazerState = "\n";
 
@@ -32,15 +33,21 @@ bool unitOn = false;
 Encoder fan(0, 255, 0, 100, EncoderMode::SCALED, 10);
 Encoder haze(0, 255, 0, 3000, EncoderMode::SCALED, 10);
 
+
+Timeout flashingDisplay(500);
+bool displayInvert = false;
+
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 //Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, 1000000, 100000);
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_SSD1327 display(128, 128, &Wire, OLED_RESET, 1000000);
+//Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 dmx_port_t dmx_port = 1; // DMX port to use
 byte dmxData[DMX_PACKET_SIZE]; // DMX data buffer
 unsigned long lastDmxUpdate = millis(); // Last DMX update time
 
 rdm_uid_t uids[32];
+rdm_uid_t hazerUID;
 
 size_t rdm_send_get_generator_state(dmx_port_t dmx_num,
                                     const rdm_uid_t *dest_uid,
@@ -136,9 +143,7 @@ std::string getHazerStateString() {
           firstNull = i;
           break; // Stop at the first null character
         }
-        Serial.printf("%02x ", uint8_t(generatorResponse[i]));
       }
-      Serial.println();
 
       for (int i = 0; i < firstNull - 2; i++) {
         generatorResponseString += generatorResponse[i];
@@ -150,7 +155,55 @@ std::string getHazerStateString() {
 
       generatorResponseString = "NACK";
     }
-    
+
+    Serial.println(generatorResponseString.back());
+
+    if (generatorResponseString.find("OFF") != std::string::npos) {
+      // If the generator state is OFF, we can return early
+      return "HAZE OFF";
+    }
+
+    if (generatorResponseString.find("HEAT") != std::string::npos) {
+      // If the generator state is OFF, we can return early
+      
+      std::string heatString = "HEAT: ";
+      if (isDigit(generatorResponseString.at(0))) {
+        heatString += generatorResponseString.at(0);
+      } else {
+        heatString += "0"; // Default to 0 if the first character is not a digit
+      }
+
+      if (isDigit(generatorResponseString.at(1))) {
+        heatString += generatorResponseString.at(1);
+      } else {
+        heatString += "0"; // Default to 0 if the second character is not a digit
+      }
+
+      heatString += "%%";
+
+      return heatString;
+    }
+
+    if (generatorResponseString.find("PURGE") != std::string::npos) {
+      // If the generator state is OFF, we can return early
+      return "PURGING";
+    }
+
+    if (generatorResponseString.find("READY") != std::string::npos) {
+      // If the generator state is OFF, we can return early
+      return "HAZE READY";
+    }
+
+    if (generatorResponseString.find("ON") != std::string::npos) {
+      // If the generator state is OFF, we can return early
+      return "HAZE ON";
+    }
+
+    if (generatorResponseString.find("FAIL") != std::string::npos) {
+      // If the generator state is OFF, we can return early
+      return "MDG ERROR";
+    }
+
     return generatorResponseString; // Return the generator state as a string
   }
 
@@ -158,10 +211,10 @@ std::string getHazerStateString() {
     /* Oops! No RDM devices were found. Double-check your DMX connections and
       try again. */
     //Serial.printf("Could not find any RDM capable devices.\n");
-    return "FAIL";
+    return "MDG OFF";
   }
 
-  return "FAIL";
+  return "ERROR";
 }
 
 
@@ -180,50 +233,91 @@ void setup() {
   dmx_set_pin(dmx_port, TRANSMIT_PIN, RECEIVE_PIN, ENABLE_PIN);
 
   //SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+  if(!display.begin(0x3C, true)) {
+  //if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
 
+  display.setRotation(0);
   display.clearDisplay();
   display.display();
 
   rdmUpdate.start(millis());
 
   displayUpdate.start(millis());
+
+  flashingDisplay.start(millis());
+}
+
+void centreText(Adafruit_SSD1327 &display, const std::string text, int y) {
+  int16_t x = ((128 - text.length() * 12) / 2);
+  display.setCursor(x, y);
+  display.printf(text.c_str());
 }
 
 void updateDisplay(uint8_t fan, float haze, std::string generatorState, uint8_t hazeValue, bool unitOn = false, bool hazeOn = false) {
   display.clearDisplay();
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(SH110X_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-  display.printf(generatorState.c_str()); // Print the generator state
+  display.setTextSize(2);             // Normal 1:1 pixel scale
+
+
+  uint8_t outputY = 42;
+  uint8_t textY = 22;
+  uint8_t lineWidth = 4;
+  uint8_t leftX = 6;
+  uint8_t rightX = 74;
+
+  uint16_t topBackgroundColor = SSD1327_WHITE;
+  uint16_t topTextColor = SSD1327_BLACK;
+
+  bool errorState = false;
+  if (errorState && flashingDisplay.checkTimeoutAndRestart(millis())) {
+    displayInvert = !displayInvert; // Toggle the display invert state
+  }
+
+  if (displayInvert) {
+    topBackgroundColor = SSD1327_BLACK;
+    topTextColor = SSD1327_WHITE;
+  }
+
+  display.fillRect(0, 0, SCREEN_HEIGHT, 16, topBackgroundColor); // Draw a border around the display
+  //display.fillRect(SCREEN_HEIGHT/2 - lineWidth/2, 0, lineWidth, SCREEN_WIDTH, SH110X_WHITE); 
+  display.setTextColor(topTextColor);        // Draw white text
+  centreText(display, generatorState, 1); // Center the generator state text
+
   
+
+
+
+  display.setTextColor(SSD1327_WHITE);        // Draw white text
+
+
+
+  display.setCursor(14,textY);
+  display.print("FAN");
+
   
-  display.setCursor(0,8); 
-  display.printf("     Fan", fan);
   if( fan < 10) {
-    display.setCursor(12,8);             // Start at top-left corner
+    display.setCursor(leftX + 24,outputY);             // Start at top-left corner
   } else if (fan < 100) {
-    display.setCursor(6,8);             
+    display.setCursor(leftX + 12,outputY);             
   } else {
-    display.setCursor(0,8);             
+    display.setCursor(leftX,outputY);             
   }
   display.printf("%d%%\n", fan);
 
-  display.setCursor(0,16);  
-  display.printf("     PSI", haze);
-  display.setCursor(0,16);             // Start at top-left corner
+  display.setCursor(rightX,textY);  
+  display.print("HAZE");
+  display.setCursor(rightX,outputY);             // Start at top-left corner
   display.printf("%.2f\n", haze);
 
-  display.setCursor(0,24);
-  display.printf("L: %d", hazeValue);
+  // display.setCursor(0,48);
+  // display.printf("L: %d", hazeValue);
 
-  display.setCursor(44,24);
-  display.printf("U: %s", unitOn ? "ON" : "OFF");
-  display.setCursor(88, 24);
-  display.printf("H: %s", hazeOn ? "ON" : "OFF");
+  // display.setCursor(88,48);
+  // display.printf("U: %s", unitOn ? "ON" : "OFF");
+  // display.setCursor(88, 24);
+  // display.printf("H: %s", hazeOn ? "ON" : "OFF");
   
   display.display();
 }
