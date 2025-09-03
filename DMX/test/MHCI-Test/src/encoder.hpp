@@ -4,6 +4,7 @@
 #include <seesaw_neopixel.h>
 #include <VirtualButton/virtualbutton.hpp>
 
+
 #define SS_SWITCH 24
 #define SS_NEOPIX 6
 #define SEESAW_BASE_ADDR          0x36
@@ -16,11 +17,28 @@ enum EncoderMode {
 
 class Encoder {
   public:
+    
+    void onPressDown() {
+        Serial.println("Encoder button pressed");
+    }
+
     Encoder(const int32_t inputMin, const int32_t inputMax, const int32_t outputMin, const int32_t outputMax, const EncoderMode mode, const uint8_t switchScale = 1) 
       : inputMin(inputMin), inputMax(inputMax), outputMin(outputMin), outputMax(outputMax), mode(mode), switchScale(switchScale) {
         hardwareEncoder = Adafruit_seesaw();
         hardwareNeopixel = seesaw_NeoPixel(1, SS_NEOPIX, NEO_GRB + NEO_KHZ800);
         found = false;
+
+        encoderButton.on(ButtonEvent::BUTTON_PRESS_DOWN, []() { Serial.println("Button press down"); } );
+        encoderButton.on(ButtonEvent::BUTTON_PRESS_UP, []() { Serial.println("Button press up"); } );
+        encoderButton.on(ButtonEvent::BUTTON_PRESS_END, []() { Serial.println("Button press end"); } );
+        encoderButton.on(ButtonEvent::BUTTON_PRESS_REPEAT_DONE, []() { Serial.println("Button press repeat done"); } );
+        encoderButton.on(ButtonEvent::BUTTON_PRESS_SINGLE_CLICK, []() { Serial.println("Button single click"); } );
+        encoderButton.on(ButtonEvent::BUTTON_PRESS_REPEAT, []() { Serial.println("Button press repeat"); } );
+        encoderButton.on(ButtonEvent::BUTTON_DOUBLE_CLICK, []() { Serial.println("Button double click"); } );
+        encoderButton.on(ButtonEvent::BUTTON_LONG_PRESS_START, []() { Serial.println("Button long press start"); } );
+        encoderButton.on(ButtonEvent::BUTTON_LONG_PRESS_HOLD, []() { Serial.println("Button long press hold"); } );
+        encoderButton.on(ButtonEvent::BUTTON_LONG_PRESS_END, []() { Serial.println("Button long press end"); } );
+        encoderButton.on(ButtonEvent::BUTTON_ERROR, []() { Serial.println("Button error"); } );
     }
 
     bool begin(const uint8_t addressOffset) {
@@ -115,11 +133,6 @@ class Encoder {
 
     bool getButtonState() const {
         return encoderButton.getState();
-    }
-
-    ButtonEvent getButtonEvent() {
-        encoderButton.update(millis()); // Update the button state based on the current time
-        return encoderButton.getLastEvent();
     }
 
 private:

@@ -1,30 +1,52 @@
 #pragma once
 #include <Timeout/timeout.hpp>
+#include <functional>
+#include <unordered_map>
 
 enum ButtonEvent {
-    BUTTON_CLICKED,
+    BUTTON_PRESS_DOWN,
+    BUTTON_PRESS_UP,
+    BUTTON_PRESS_END,
+    BUTTON_PRESS_REPEAT_DONE,
+    BUTTON_PRESS_SINGLE_CLICK,
+    BUTTON_PRESS_REPEAT,
+    BUTTON_DOUBLE_CLICK,
     BUTTON_LONG_PRESS_START,
-    BUTTON_NONE,
+    BUTTON_LONG_PRESS_HOLD,
+    BUTTON_LONG_PRESS_END,
+    BUTTON_ERROR,
 };
 
 class VirtualButton {
   public:
+    using Callback = std::function<void()>;
+
     VirtualButton() : state(false) {}
+
+    void on(ButtonEvent event, Callback callback) {
+        callbacks[event] = callback;
+    }
+
+    void trigger(ButtonEvent event) {
+        if (!callbacks.count(event)) {
+            if (callbacks.count(BUTTON_ERROR)) {
+                callbacks[BUTTON_ERROR]();
+            }
+        }
+
+        callbacks[event]();
+    }
 
     void setState(bool newState, unsigned long currentTime) {
         if (state == newState) return; // No change in state           
         state = newState;
         stateChanged = true;
 
-        // Button has been released.
-        if (!this->state) {
-            return;
+        if (state) {
+            trigger(BUTTON_PRESS_DOWN);
+        } else {
+            trigger(BUTTON_PRESS_UP);
         }
-
-        // Button has been pressed down.
-        //Serial.println("Button pressed, starting timeouts");
-        longPressTimeout.start(currentTime);
-        clickTimeout.start(currentTime);
 
         return;
     }
@@ -36,42 +58,12 @@ class VirtualButton {
     void update(unsigned long currentTime) {
         if (!stateChanged) return;
         stateChanged = false;
-
-        //Serial.println("Button state changed to: " + String(state));
-
-        // We check to see if the button was pressed long enough to trigger a long press.
-        // if (!state && longPressTimeout.checkTimeoutNoStop(currentTime)) {
-        //     // If the long press timeout is active and it has timed out, we return a long press event.
-        //     longPressTimeout.stop(); // Stop the long press timeout
-        //     clickTimeout.stop(); // Stop the click timeout
-        //     lastEvent = BUTTON_LONG_PRESS_START;
-        //     Serial.println("Button long press started");
-        //     return;
-        // }
-
-        if (!state && clickTimeout.isActive() && !clickTimeout.checkTimeoutNoStop(currentTime)) {
-            // If the click timeout is active and it has timed out, we return a click event.
-            longPressTimeout.stop();
-            clickTimeout.stop(); // Stop the click timeout
-            lastEvent = BUTTON_CLICKED;
-            Serial.println("Button clicked");
-            return;
-        }
-    }
-
-    ButtonEvent getLastEvent() {
-        // If neither timeout is active, we reset the last event.
-        ButtonEvent tempEvent = lastEvent;
-        lastEvent = BUTTON_NONE;
-        return tempEvent;
     }
     
 
   private:
     bool state;
     bool stateChanged = false;
-    ButtonEvent lastEvent = BUTTON_NONE;
-
-    Timeout longPressTimeout{1000}; // 1 second for long press
-    Timeout clickTimeout{500}; // <500 ms for single click
-};
+    
+    std::unordered_map<ButtonEvent, Callback> callbacks;
+}

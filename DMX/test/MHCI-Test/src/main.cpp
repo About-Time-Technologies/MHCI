@@ -338,33 +338,33 @@ void loop() {
   fan.update();
   haze.update();
 
-  switch (fan.getButtonEvent()) {
-    case ButtonEvent::BUTTON_CLICKED:
-      Serial.println("Fan button clicked");
-      unitOn = !unitOn; // Toggle unit on/off
-      break;
-    case ButtonEvent::BUTTON_LONG_PRESS_START:
-      Serial.println("Fan button long press started");
-      break;
-    case ButtonEvent::BUTTON_NONE:
-      break;
-    default:
-      break;
-  }
+  // switch (fan.getButtonEvent()) {
+  //   case ButtonEvent::BUTTON_CLICKED:
+  //     Serial.println("Fan button clicked");
+  //     unitOn = !unitOn; // Toggle unit on/off
+  //     break;
+  //   case ButtonEvent::BUTTON_LONG_PRESS_START:
+  //     Serial.println("Fan button long press started");
+  //     break;
+  //   case ButtonEvent::BUTTON_NONE:
+  //     break;
+  //   default:
+  //     break;
+  // }
 
-  switch (haze.getButtonEvent()) {
-    case ButtonEvent::BUTTON_CLICKED:
-      Serial.println("Haze button clicked");
-      hazeOn = !hazeOn; // Toggle haze on/off
-      break;
-    case ButtonEvent::BUTTON_LONG_PRESS_START:
-      Serial.println("Haze button long press started");
-      break;
-    case ButtonEvent::BUTTON_NONE:
-      break;
-    default:
-      break;
-  }
+  // switch (haze.getButtonEvent()) {
+  //   case ButtonEvent::BUTTON_CLICKED:
+  //     Serial.println("Haze button clicked");
+  //     hazeOn = !hazeOn; // Toggle haze on/off
+  //     break;
+  //   case ButtonEvent::BUTTON_LONG_PRESS_START:
+  //     Serial.println("Haze button long press started");
+  //     break;
+  //   case ButtonEvent::BUTTON_NONE:
+  //     break;
+  //   default:
+  //     break;
+  // }
 
 
   if (rdmUpdate.checkTimeoutAndRestart(millis())) {
@@ -379,7 +379,7 @@ void loop() {
   
 
   if (displayUpdate.checkTimeoutAndRestart(millis()) || displayUpdateRequired) {
-    Serial.println("Updating display...");
+    //Serial.println("Updating display...");
     displayUpdateRequired = false; // Reset the flag after updating the display
     updateDisplay(uint8_t(fan.getMappedValue()), float(haze.getMappedValue()) / 1000.0, hazerState, uint8_t(haze.getRawValue()), unitOn, hazeOn);
   }
