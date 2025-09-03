@@ -1,5 +1,8 @@
 #pragma once
 
+#define LOG_LOCAL_LEVEL LOG_LEVEL
+#include "esp_log.h"
+
 enum ButtonEvent {
     BUTTON_PRESS_DOWN,
     BUTTON_PRESS_UP,
@@ -23,6 +26,7 @@ public:
     bool getState();
 
 private:
+    const char* TAG;
     bool lastState;
     bool currentState;
     unsigned long lastChangeTime;
@@ -30,6 +34,9 @@ private:
     unsigned long lastReleaseTime;
     bool longPressTriggered;
     bool doubleClickWaiting;
+
+    bool singleClickPending;
+    unsigned singleClickStartTime;
 
     unsigned long debounceTime;
     unsigned long longPressTime;

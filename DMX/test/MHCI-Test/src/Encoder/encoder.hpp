@@ -1,4 +1,8 @@
 #pragma once
+
+#define LOG_LOCAL_LEVEL LOG_LEVEL
+#include "esp_log.h"
+
 #include <Arduino.h>
 #include <Adafruit_seesaw.h>
 #include <seesaw_neopixel.h>
@@ -19,7 +23,7 @@ class Encoder {
   public:
 
     Encoder(const int32_t inputMin, const int32_t inputMax, const int32_t outputMin, const int32_t outputMax, const EncoderMode mode, const uint8_t switchScale = 1) 
-      : inputMin(inputMin), inputMax(inputMax), outputMin(outputMin), outputMax(outputMax), mode(mode), switchScale(switchScale) {
+      : inputMin(inputMin), inputMax(inputMax), outputMin(outputMin), outputMax(outputMax), mode(mode), switchScale(switchScale), TAG("Encoder") {
         hardwareEncoder = Adafruit_seesaw();
         hardwareNeopixel = seesaw_NeoPixel(1, SS_NEOPIX, NEO_GRB + NEO_KHZ800);
         found = false;
@@ -34,8 +38,10 @@ class Encoder {
     }
 
     bool begin(const uint8_t addressOffset) {
+        ESP_LOGV(TAG, "Initialising encoder #%d", addressOffset);
+        
         if (!hardwareEncoder.begin(SEESAW_BASE_ADDR + addressOffset) || !hardwareNeopixel.begin(SEESAW_BASE_ADDR + addressOffset)) {
-            Serial.printf("Couldn't find encoder #%d\n", addressOffset);
+            ESP_LOGE(TAG, "Couldn't find encoder #%d", addressOffset);
             return found;
         } 
 
@@ -128,6 +134,8 @@ class Encoder {
     }
 
 private:
+    const char* TAG;
+
     Adafruit_seesaw hardwareEncoder;
     seesaw_NeoPixel hardwareNeopixel;
     bool found = false;
