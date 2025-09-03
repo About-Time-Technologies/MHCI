@@ -2,6 +2,7 @@
 #include <Timeout/timeout.hpp>
 #include <functional>
 #include <unordered_map>
+#include "virtualbuttonstate.hpp"
 
 enum ButtonEvent {
     BUTTON_PRESS_DOWN,
@@ -21,7 +22,7 @@ class VirtualButton {
   public:
     using Callback = std::function<void()>;
 
-    VirtualButton() : state(false) {}
+    VirtualButton() : state(VirtualButton_NoState()) {}
 
     void on(ButtonEvent event, Callback callback) {
         callbacks[event] = callback;
@@ -37,12 +38,12 @@ class VirtualButton {
         callbacks[event]();
     }
 
-    void setState(bool newState, unsigned long currentTime) {
-        if (state == newState) return; // No change in state           
-        state = newState;
-        stateChanged = true;
+    void setState(bool newHardwareState, unsigned long currentTime) {
+        if (hardwareState == newHardwareState) return; // No change in hardware state           
+        hardwareState = newHardwareState;
+        stateFlag = true;
 
-        if (state) {
+        if (hardwareState) {
             trigger(BUTTON_PRESS_DOWN);
         } else {
             trigger(BUTTON_PRESS_UP);
@@ -51,19 +52,20 @@ class VirtualButton {
         return;
     }
 
-    bool getState() const {
-        return state;
+    bool getHardwareState() const {
+        return hardwareState;
     }
 
     void update(unsigned long currentTime) {
-        if (!stateChanged) return;
-        stateChanged = false;
+        if (!stateFlag) return;
+        stateFlag = false;
     }
     
 
   private:
-    bool state;
-    bool stateChanged = false;
+    VirtualButtonState state;
+    bool hardwareState = false;
+    bool stateFlag = false;
     
     std::unordered_map<ButtonEvent, Callback> callbacks;
 }
