@@ -15,7 +15,7 @@
 //#include <Adafruit_SSD1306.h>
 //#include <Adafruit_SH110X.h>
 #include <Adafruit_SSD1327.h>
-#include <encoder.hpp>
+#include <Encoder/encoder.hpp>
 #include <esp_dmx.h>
 #include <dmx/include/service.h>
 #include <rdm/controller.h>

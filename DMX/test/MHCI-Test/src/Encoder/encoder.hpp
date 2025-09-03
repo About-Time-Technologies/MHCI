@@ -17,10 +17,6 @@ enum EncoderMode {
 
 class Encoder {
   public:
-    
-    void onPressDown() {
-        Serial.println("Encoder button pressed");
-    }
 
     Encoder(const int32_t inputMin, const int32_t inputMax, const int32_t outputMin, const int32_t outputMax, const EncoderMode mode, const uint8_t switchScale = 1) 
       : inputMin(inputMin), inputMax(inputMax), outputMin(outputMin), outputMax(outputMax), mode(mode), switchScale(switchScale) {
@@ -30,15 +26,11 @@ class Encoder {
 
         encoderButton.on(ButtonEvent::BUTTON_PRESS_DOWN, []() { Serial.println("Button press down"); } );
         encoderButton.on(ButtonEvent::BUTTON_PRESS_UP, []() { Serial.println("Button press up"); } );
-        encoderButton.on(ButtonEvent::BUTTON_PRESS_END, []() { Serial.println("Button press end"); } );
-        encoderButton.on(ButtonEvent::BUTTON_PRESS_REPEAT_DONE, []() { Serial.println("Button press repeat done"); } );
-        encoderButton.on(ButtonEvent::BUTTON_PRESS_SINGLE_CLICK, []() { Serial.println("Button single click"); } );
-        encoderButton.on(ButtonEvent::BUTTON_PRESS_REPEAT, []() { Serial.println("Button press repeat"); } );
-        encoderButton.on(ButtonEvent::BUTTON_DOUBLE_CLICK, []() { Serial.println("Button double click"); } );
+        encoderButton.on(ButtonEvent::BUTTON_PRESS, []() { Serial.println("Button single click"); } );
         encoderButton.on(ButtonEvent::BUTTON_LONG_PRESS_START, []() { Serial.println("Button long press start"); } );
         encoderButton.on(ButtonEvent::BUTTON_LONG_PRESS_HOLD, []() { Serial.println("Button long press hold"); } );
         encoderButton.on(ButtonEvent::BUTTON_LONG_PRESS_END, []() { Serial.println("Button long press end"); } );
-        encoderButton.on(ButtonEvent::BUTTON_ERROR, []() { Serial.println("Button error"); } );
+        encoderButton.on(ButtonEvent::BUTTON_DOUBLE_PRESS, []() { Serial.println("Button double press"); } );
     }
 
     bool begin(const uint8_t addressOffset) {
@@ -70,7 +62,7 @@ class Encoder {
         if (!found) return false;
 
         // Check for encoder switch press
-        encoderButton.setState(!hardwareEncoder.digitalRead(SS_SWITCH), millis()); // Invert the switch state for button logic
+        encoderButton.update(millis(), !hardwareEncoder.digitalRead(SS_SWITCH)); // Invert the switch state for button logic
   
         // Read the encoder value and delta
         
@@ -131,7 +123,7 @@ class Encoder {
         return state;
     }
 
-    bool getButtonState() const {
+    bool getButtonState() {
         return encoderButton.getState();
     }
 
