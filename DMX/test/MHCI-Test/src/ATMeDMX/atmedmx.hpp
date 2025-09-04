@@ -47,8 +47,12 @@ private:
     byte dmxData[DMX_PACKET_SIZE]; // DMX data buffer
     unsigned long lastDmxUpdate; // Last DMX update time
 
+
     rdm_uid_t uids[32];
     rdm_uid_t hazerUID;
+    bool hazerFound = false;
+
+    bool findHazer();
 
     std::string hazerStateString = "BOOTING";
 

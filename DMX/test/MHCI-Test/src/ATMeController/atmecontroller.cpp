@@ -83,7 +83,11 @@ bool ATMeController::update(unsigned long now) {
     if (hazeDelta) ESP_LOGD(TAG, "Haze delta: %d", hazeDelta);
 
     hazeOn = true;
-    if (ATMeInputState::INPUT_PURGE_ACTIVE == inputState) hazeOn = false;
+    unitOn = true;
+    if (ATMeInputState::INPUT_PURGE_ACTIVE == inputState) {
+        hazeOn = false;
+        unitOn = false;
+    }
 
     if (ATMeInputState::INPUT_ADDRESSES == inputState || ATMeInputState::INPUT_LEDs == inputState) {
         menuTimeout.startIfNotStarted(now);
@@ -255,8 +259,9 @@ void ATMeController::processAddressInputs(int32_t fanDelta, int32_t hazeDelta, b
 
     fanDelta *= fanMultiplier;
     hazeDelta *= hazeMultiplier;
-    fanAddress = uint8_t(constrainAddition(fanAddress, fanDelta, 1, hazeAddress - 1, fanMultiplier));
-    hazeAddress = uint8_t(constrainAddition(hazeAddress, hazeDelta, fanAddress + 1, 510, hazeMultiplier));
+
+    fanAddress = uint16_t(constrainAddition(fanAddress, fanDelta, 1, hazeAddress - 1, fanMultiplier));
+    hazeAddress = uint16_t(constrainAddition(hazeAddress, hazeDelta, fanAddress + 1, 510, hazeMultiplier));
 
     saveAddresses();
 }

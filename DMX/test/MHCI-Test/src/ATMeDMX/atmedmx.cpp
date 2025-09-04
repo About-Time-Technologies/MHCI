@@ -77,7 +77,7 @@ std::string ATMeDMX::getHazerStateString() {
   return hazerStateString;
 }
 
-std::string ATMeDMX::updateHazerStateString() {
+bool ATMeDMX::findHazer() {
   int devicesFound = rdm_discover_devices_simple(dmx_port, uids, 32);
 
   /* If any devices were found during discovery, lets iterate through them. */
@@ -108,107 +108,14 @@ std::string ATMeDMX::updateHazerStateString() {
     }
 
     if (deviceInfo.model_id == 5 && destUID.man_id == 0x4d44) {
-      //Serial.println("ATMe found!");
+      hazerUID = destUID;
+      ESP_LOGI(TAG, "ATMe Hazer found with UID " UIDSTR "\n", UID2STR(hazerUID));
+      hazerFound = true;
+      return hazerFound;
     } else {
         ESP_LOGW(TAG, "Unknown device found");
       continue; // Skip to the next device
     }
-
-    /* Finally, we will get and set the DMX start address. It is not required
-      for all RDM devices to support the DMX start address parameter so it is
-      possible (but unlikely) that your device does not support this parameter.
-      After getting the DMX start address, we will increment it by one. */
-    uint16_t dmxStartAddress;
-    if (rdm_send_get_dmx_start_address(dmx_port, &destUID, subDevice,
-                                       &dmxStartAddress, &ack)) {
-      //Serial.printf("DMX start address is %i\n", dmxStartAddress);
-
-
-    } else if (ack.type == RDM_RESPONSE_TYPE_NACK_REASON) {
-      /* In the event that the DMX start address request fails, print the reason
-        for the failure. The NACK reason and other information on the response
-        can be found in the ack variable we declared earlier. */
-        ESP_LOGE(TAG, UIDSTR " GET DMX_START_ADDRESS NACK reason: 0x%02x\n",
-                    ack.src_uid, ack.nack_reason);
-    }
-
-    char generatorResponse[20] = {0};
-    std::string generatorResponseString = "";
-
-    uint8_t firstNull = 0;
-
-    if (rdm_send_get_generator_state(dmx_port, &destUID, subDevice,
-                                     generatorResponse, &ack)) {
-      //generatorResponseString = std::string(generatorResponse);
-      //Serial.printf("Found generator state: %s\n", generatorResponseString.c_str());
-
-      for (int i = 0; i < 20; i++) {
-        if (generatorResponse[i] == '\0') {
-          firstNull = i;
-          break; // Stop at the first null character
-        }
-      }
-
-      for (int i = 0; i < firstNull - 2; i++) {
-        generatorResponseString += generatorResponse[i];
-      }
-
-    } else if (ack.type == RDM_RESPONSE_TYPE_NACK_REASON) {
-        ESP_LOGW(TAG, UIDSTR " GET GENERATOR_STATE NACK reason: 0x%02x\n",
-                    ack.src_uid, ack.nack_reason);
-
-      generatorResponseString = "NACK";
-    }
-
-    Serial.println(generatorResponseString.back());
-
-    if (generatorResponseString.find("OFF") != std::string::npos) {
-      // If the generator state is OFF, we can return early
-      return "HAZE OFF";
-    }
-
-    if (generatorResponseString.find("HEAT") != std::string::npos) {
-      // If the generator state is OFF, we can return early
-      
-      std::string heatString = "HEAT: ";
-      if (isDigit(generatorResponseString.at(0))) {
-        heatString += generatorResponseString.at(0);
-      } else {
-        heatString += "0"; // Default to 0 if the first character is not a digit
-      }
-
-      if (isDigit(generatorResponseString.at(1))) {
-        heatString += generatorResponseString.at(1);
-      } else {
-        heatString += "0"; // Default to 0 if the second character is not a digit
-      }
-
-      heatString += "%%";
-
-      return heatString;
-    }
-
-    if (generatorResponseString.find("PURGE") != std::string::npos) {
-      // If the generator state is OFF, we can return early
-      return "PURGING";
-    }
-
-    if (generatorResponseString.find("READY") != std::string::npos) {
-      // If the generator state is OFF, we can return early
-      return "HAZE READY";
-    }
-
-    if (generatorResponseString.find("ON") != std::string::npos) {
-      // If the generator state is OFF, we can return early
-      return "HAZE ON";
-    }
-
-    if (generatorResponseString.find("FAIL") != std::string::npos) {
-      // If the generator state is OFF, we can return early
-      return "MDG ERROR";
-    }
-
-    return generatorResponseString; // Return the generator state as a string
   }
 
   if (devicesFound == 0) {
@@ -216,8 +123,101 @@ std::string ATMeDMX::updateHazerStateString() {
       try again. */
     //Serial.printf("Could not find any RDM capable devices.\n");
     ESP_LOGW(TAG, "No RDM devices found");
-    return "MDG N/A";
+    hazerFound = false;
+    return hazerFound;
+  }
+}
+
+std::string ATMeDMX::updateHazerStateString() {
+
+  if (!hazerFound) {
+    if (!findHazer()) {
+        return "MDG N/A";
+    }
   }
 
-  return "ERROR";
+  ESP_LOGV(TAG, "Hazer found, checking state...");
+
+  // Presume the hazer has been found, or it was found last time.
+  // Let's check if it responds to RDM requests.
+
+  rdm_sub_device_t subDevice = RDM_SUB_DEVICE_ROOT;
+  rdm_ack_t ack;
+
+  char generatorResponse[20] = {0};
+  std::string generatorResponseString = "";
+
+  uint8_t firstNull = 0;
+
+  if (rdm_send_get_generator_state(dmx_port, &hazerUID, subDevice,
+                                    generatorResponse, &ack)) {
+    //generatorResponseString = std::string(generatorResponse);
+    //Serial.printf("Found generator state: %s\n", generatorResponseString.c_str());
+
+    for (int i = 0; i < 20; i++) {
+      if (generatorResponse[i] == '\0') {
+        firstNull = i;
+        break; // Stop at the first null character
+      }
+    }
+
+    for (int i = 0; i < firstNull - 2; i++) {
+      generatorResponseString += generatorResponse[i];
+    }
+
+  } else if (ack.type == RDM_RESPONSE_TYPE_NACK_REASON) {
+    ESP_LOGW(TAG, UIDSTR " GET GENERATOR_STATE NACK reason: 0x%02x\n",
+                  ack.src_uid, ack.nack_reason);
+        
+    ESP_LOGW(TAG, "Hazer not responding to RDM requests");
+    generatorResponseString = "NACK";
+    hazerFound = false;
+    return generatorResponseString;
+  }
+
+  Serial.println(generatorResponseString.back());
+
+  if (generatorResponseString.find("OFF") != std::string::npos) {
+    // If the generator state is OFF, we can return early
+    return "HAZE OFF";
+  }
+
+  if (generatorResponseString.find("HEAT") != std::string::npos) {
+    // If the generator state is OFF, we can return early
+    
+    std::string heatString = "HEAT: ";
+    if (isDigit(generatorResponseString.at(0))) {
+      heatString += generatorResponseString.at(0);
+    } else {
+      heatString += "0"; // Default to 0 if the first character is not a digit
+    }
+
+    if (isDigit(generatorResponseString.at(1))) {
+      heatString += generatorResponseString.at(1);
+    } else {
+      heatString += "0"; // Default to 0 if the second character is not a digit
+    }
+
+    heatString += "%%";
+
+    return heatString;
+  }
+
+  if (generatorResponseString.find("PURGE") != std::string::npos) {
+    return "PURGING";
+  }
+
+  if (generatorResponseString.find("READY") != std::string::npos) {
+    return "HAZE READY";
+  }
+
+  if (generatorResponseString.find("ON") != std::string::npos) {
+    return "HAZE ON";
+  }
+
+  if (generatorResponseString.find("FAIL") != std::string::npos) {
+    return generatorResponseString;
+  }
+
+  return "MDG N/A";
 }
