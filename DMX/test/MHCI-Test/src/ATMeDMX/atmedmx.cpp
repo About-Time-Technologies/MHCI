@@ -1,4 +1,5 @@
 #include "ATMeDMX/atmedmx.hpp"
+#include "ATMeController/atmecontroller.hpp"
 
 #include <string>
 
@@ -30,20 +31,20 @@ bool ATMeDMX::begin(unsigned long now) {
   return success;
 }
 
-bool ATMeDMX::update(unsigned long now, uint16_t _fanAddress, uint8_t _fanValue, uint16_t _hazeAddress, bool _unitOn, uint8_t _hazeValue, bool _hazeOn) {
-  fan.address = _fanAddress;
-  fan.value = _fanValue;
+bool ATMeDMX::update(unsigned long now, ATMeController& atmeController) {
+  fan.address = atmeController.fanAddress;
+  fan.value = atmeController.fanValue;
 
-  assert(_hazeAddress <= 510);
+  assert(atmeController.hazeAddress <= 510);
 
-  unitOn.address = _hazeAddress;
-  unitOn.value = _unitOn ? 255 : 0;
+  unitOn.address = atmeController.hazeAddress;
+  unitOn.value = atmeController.unitOn ? 255 : 0;
   
-  hazeLevel.address = _hazeAddress + 1;
-  hazeLevel.value = _hazeValue;
+  hazeLevel.address = atmeController.hazeAddress + 1;
+  hazeLevel.value = atmeController.hazeLevel;
 
-  hazeOn.address = _hazeAddress + 2;
-  hazeOn.value = _hazeOn ? 255 : 0;
+  hazeOn.address = atmeController.hazeAddress + 2;
+  hazeOn.value = atmeController.hazeOn ? 255 : 0;
 
   if (rdmUpdate.checkTimeoutAndRestart(now)) {
     hazerStateString = updateHazerStateString();

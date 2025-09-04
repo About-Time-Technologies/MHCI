@@ -1,4 +1,9 @@
 #include "ATMeDisplay/atmedisplay.hpp"
+#include "ATMeController/atmecontroller.hpp"
+
+long map(long x, long in_min, long in_max, long out_min, long out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 bool ATMeDisplay::begin(unsigned long now) {
     //SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -19,7 +24,7 @@ bool ATMeDisplay::begin(unsigned long now) {
     return true;
 };
 
-bool ATMeDisplay::update(unsigned long now, bool forceUpdate, uint8_t fan, float haze, std::string generatorState, uint8_t hazeValue, bool unitOn, bool hazeOn) {
+bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& atmeController) {
     if (!forceUpdate && !displayUpdate.checkTimeoutAndRestart(now)) return false;
 
     
@@ -50,35 +55,42 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, uint8_t fan, float
     display.fillRect(0, 0, SCREEN_HEIGHT, 16, topBackgroundColor); // Draw a border around the display
     //display.fillRect(SCREEN_HEIGHT/2 - lineWidth/2, 0, lineWidth, SCREEN_WIDTH, SH110X_WHITE); 
     display.setTextColor(topTextColor);        // Draw white text
-    centreText(display, generatorState, 1); // Center the generator state text
+    centreText(display, atmeController.getATMeStateString(), 1); // Center the generator state text
 
     display.setTextColor(SSD1327_WHITE);        // Draw white text
 
     display.setCursor(14,textY);
     display.print("FAN");
 
+    uint8_t fanValue = uint8_t(map(atmeController.fanValue, 0, 255, 0, 100));
 
-    if( fan < 10) {
+    if(fanValue < 10) {
         display.setCursor(leftX + 24,outputY);             // Start at top-left corner
-    } else if (fan < 100) {
+    } else if (fanValue < 100) {
         display.setCursor(leftX + 12,outputY);             
     } else {
         display.setCursor(leftX,outputY);             
     }
-    display.printf("%d%%\n", fan);
+    display.printf("%d%%\n", fanValue);
 
     display.setCursor(rightX,textY);  
     display.print("HAZE");
+
     display.setCursor(rightX,outputY);             // Start at top-left corner
-    display.printf("%.2f\n", haze);
 
-    // display.setCursor(0,48);
-    // display.printf("L: %d", hazeValue);
+    uint8_t hazeValue = uint8_t(map(atmeController.hazeLevel, 0, 255, 0, 100));
+    if(hazeValue < 10) {
+        display.setCursor(rightX + 24,outputY);             // Start at top-left corner
+    } else if (hazeValue < 100) {
+        display.setCursor(rightX + 12,outputY);             
+    } else {
+        display.setCursor(rightX,outputY);             
+    }
+    display.printf("%d%%\n", hazeValue);
 
-    // display.setCursor(88,48);
-    // display.printf("U: %s", unitOn ? "ON" : "OFF");
-    // display.setCursor(88, 24);
-    // display.printf("H: %s", hazeOn ? "ON" : "OFF");
+    display.setCursor(0,60);
+
+    centreText(display, atmeController.getInputStateString(), 68);
 
     display.display();
 

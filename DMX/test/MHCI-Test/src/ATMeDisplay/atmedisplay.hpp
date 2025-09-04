@@ -9,6 +9,9 @@
 #include <Wire.h>
 
 #include <Timeout/timeout.hpp>
+#include <ATMeController/atmecontroller.hpp>
+
+class ATMeController;
 
 class ATMeDisplay {
 public:
@@ -22,7 +25,7 @@ public:
     ~ATMeDisplay() {};
 
     bool begin(unsigned long now);
-    bool update(unsigned long now, bool forceUpdate, uint8_t fan, float haze, std::string generatorState, uint8_t hazeValue, bool unitOn, bool hazeOn);
+    bool update(unsigned long now, bool forceUpdate, ATMeController& atmeController);
 
 private:
     const char* TAG;

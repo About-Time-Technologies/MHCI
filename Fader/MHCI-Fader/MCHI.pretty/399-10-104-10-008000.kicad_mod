@@ -218,7 +218,7 @@
 		(remove_unused_layers no)
 		(uuid "8076c02f-934a-4de1-ab9b-ef5843abf1f5")
 	)
-	(model "C:/dev/About-Time/MHCI/common/3D/399-10-104-10-008000.stp"
+	(model "C:/dev/MHCI/common/3D/399-10-104-10-008000.stp"
 		(offset
 			(xyz 0 0 0)
 		)

@@ -11,6 +11,9 @@
 #include <rdm/controller/include/utils.h>
 #include "DMXFixture/dmxfixture.hpp"
 #include "Timeout/timeout.hpp"
+#include "ATMeController/atmecontroller.hpp"
+
+class ATMeController;
 
 class ATMeDMX {
 public:
@@ -22,7 +25,7 @@ public:
         hazeLevel(hazerAddress + 1, 0), hazeOn(hazerAddress + 2, 0) {};
 
     bool begin(unsigned long now);
-    bool update(unsigned long now, uint16_t _fanAddress, uint8_t _fanValue, uint16_t hazerAddress, bool _unitOn, uint8_t _hazeValue, bool _hazeOn);
+    bool update(unsigned long now, ATMeController& atmeController);
 
     bool sendDMX();
 

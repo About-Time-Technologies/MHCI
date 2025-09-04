@@ -7,9 +7,6 @@ ATMeEncoder::ATMeEncoder() :
     hardwareEncoder(Adafruit_seesaw()),
     hardwareNeopixel(seesaw_NeoPixel(1, SS_NEOPIX, NEO_GRB + NEO_KHZ800)) {
 
-    for (int i = 0; i < 1; i++) {
-        callbacks[i] = nullptr;
-    }
 }
 
 bool ATMeEncoder::begin(unsigned long now, const uint8_t addressOffset) {
@@ -41,16 +38,14 @@ bool ATMeEncoder::begin(unsigned long now, const uint8_t addressOffset) {
     return found;
 }
 
-bool ATMeEncoder::update(unsigned long now) {
+int32_t ATMeEncoder::update(unsigned long now) {
     if (!found) return false;
 
-    hardwareButton.update(now, !hardwareEncoder.digitalRead(SS_SWITCH));
+    buttonState = !hardwareEncoder.digitalRead(SS_SWITCH);
 
-    int32_t encoderDelta = hardwareEncoder.getEncoderDelta();
+    hardwareButton.update(now, buttonState);
 
-    if (encoderDelta) trigger(EncoderEvent::ENCODER_DELTA, encoderDelta);
-
-    return true;
+    return hardwareEncoder.getEncoderDelta();
 }
 
 bool ATMeEncoder::updateNeopixel(const uint8_t r, const uint8_t g, const uint8_t b) {
@@ -65,14 +60,4 @@ bool ATMeEncoder::updateNeopixel(const uint8_t r, const uint8_t g, const uint8_t
 
 void ATMeEncoder::onButtonEvent(ButtonEvent event, ButtonCallback callback) {
     hardwareButton.on(event, callback);
-}
-
-void ATMeEncoder::onEncoderEvent(EncoderEvent event, EncoderCallback callback) {
-    callbacks[event] = callback;
-}
-
-void ATMeEncoder::trigger(EncoderEvent event, int32_t delta) {
-    if (callbacks[event]) {
-        callbacks[event](delta);
-    }
 }

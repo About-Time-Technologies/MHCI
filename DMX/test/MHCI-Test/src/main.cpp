@@ -9,18 +9,24 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "ATMeController/atmecontroller.hpp"
+#include "ATMeDisplay/atmedisplay.hpp"
+#include "ATMeDMX/atmedmx.hpp"
 
-ATMeController atme;
+ATMeController* atme;
+ATMeDisplay display;
+ATMeDMX dmx;
 
 void setup() {
   Serial.begin(115200);
 
   Wire.begin(SDA_PIN, SCL_PIN); // SDA, SCL pins for ESP32
 
-  atme.begin(millis());
+  atme = new ATMeController(&display, &dmx);
+
+  atme->begin(millis());
 
 }
 
 void loop() {
-  atme.update(millis());
+  atme->update(millis());
 }

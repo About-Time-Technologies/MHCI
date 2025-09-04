@@ -12,23 +12,17 @@
 #define SS_NEOPIX 6
 #define SEESAW_BASE_ADDR          0x36
 
-enum EncoderEvent {
-    ENCODER_DELTA
-};
-
-typedef void (*EncoderCallback)(int32_t delta);
 
 class ATMeEncoder {
 public:
     ATMeEncoder();
 
     bool begin(unsigned long now, const uint8_t addressOffset);
-    bool update(unsigned long now);
+    int32_t update(unsigned long now);
 
     void onButtonEvent(ButtonEvent event, ButtonCallback callback);
-    void onEncoderEvent(EncoderEvent event, EncoderCallback callback);
 
-    bool getButtonState();
+    bool getButtonState() { return buttonState; };
 
     bool updateNeopixel(const uint8_t r, const uint8_t g, const uint8_t b);
 
@@ -43,6 +37,4 @@ private:
     
     bool buttonState;
 
-    EncoderCallback callbacks[1];
-    void trigger(EncoderEvent event, int32_t delta);
 };
