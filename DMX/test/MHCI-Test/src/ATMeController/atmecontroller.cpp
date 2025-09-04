@@ -255,8 +255,8 @@ void ATMeController::processAddressInputs(int32_t fanDelta, int32_t hazeDelta, b
 
     fanDelta *= fanMultiplier;
     hazeDelta *= hazeMultiplier;
-    fanAddress = uint8_t(constrainAddition(fanAddress, fanDelta, 1, hazeAddress - 1, fanMultiplier));
-    hazeAddress = uint8_t(constrainAddition(hazeAddress, hazeDelta, fanAddress + 1, 510, hazeMultiplier));
+    fanAddress = uint16_t(constrainAddition(fanAddress, fanDelta, 1, hazeAddress - 1, fanMultiplier));
+    hazeAddress = uint16_t(constrainAddition(hazeAddress, hazeDelta, fanAddress + 1, 510, hazeMultiplier));
 
     saveAddresses();
 }
