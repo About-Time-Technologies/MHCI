@@ -110,6 +110,40 @@ bool ATMeController::update(unsigned long now) {
 
     }
 
+    uint8_t brightness = 128;
+
+    switch (inputState) {
+        case ATMeInputState::INPUT_CONTROL:
+            if (!hazeEncoder.getButtonState()) {
+                hazeEncoder.updateNeopixel(0,brightness,0);
+            } else {
+                hazeEncoder.updateNeopixel(0,brightness,brightness/4);
+            }
+
+            if (!fanEncoder.getButtonState()) {
+                fanEncoder.updateNeopixel(0,brightness,0);
+            } else {
+                fanEncoder.updateNeopixel(0,brightness,brightness/4);
+            }
+            break;
+        case ATMeInputState::INPUT_ADDRESSES:
+            hazeEncoder.updateNeopixel(brightness,brightness,0);
+            fanEncoder.updateNeopixel(brightness,brightness,0);
+            break;
+        case ATMeInputState::INPUT_LEDs:
+            hazeEncoder.updateNeopixel(0,0,brightness);
+            fanEncoder.updateNeopixel(0,0,brightness);
+            break;
+        case ATMeInputState::INPUT_PURGE_HOLD:
+            hazeEncoder.updateNeopixel(brightness,0,brightness);
+            fanEncoder.updateNeopixel(brightness,0,brightness);
+            break;
+        case ATMeInputState::INPUT_PURGE_ACTIVE:
+            hazeEncoder.updateNeopixel(brightness,0,0);
+            fanEncoder.updateNeopixel(brightness,0,0);
+            break;
+    }
+
     dmx->update(now, *this);
 
     if (fanDelta || hazeDelta) triggerDisplayUpdate = true;
