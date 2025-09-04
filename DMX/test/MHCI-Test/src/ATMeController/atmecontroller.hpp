@@ -8,6 +8,7 @@
 #include "ATMeDMX/atmedmx.hpp"
 #include <Encoder/encoder.hpp>
 
+
 class ATMeController {
 public:
     ATMeController();
