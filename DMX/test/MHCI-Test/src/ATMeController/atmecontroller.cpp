@@ -108,13 +108,12 @@ bool ATMeController::update(unsigned long now) {
     fanEncoder.updateNeopixel(0,0,0);
 
 
-
     switch (controlState) {
         case ATMeControlState::CONTROL_HEATING:
             unitOn = true;
             hazeOn = false;
-            hazeEncoder.updateNeopixel(brightness,brightness/2,0);
-            fanEncoder.updateNeopixel(brightness,brightness/2,0);
+            hazeEncoder.updateNeopixel(brightness,brightness/3,0);
+            fanEncoder.updateNeopixel(brightness,brightness/3,0);
             break;
         case ATMeControlState::CONTROL_ON:
             unitOn = true;
@@ -148,10 +147,13 @@ bool ATMeController::update(unsigned long now) {
             fanEncoder.updateNeopixel(brightness,brightness,0);
             break;
         case ATMeInputState::INPUT_LEDs:
-            hazeEncoder.updateNeopixel(0,0,brightness);
-            fanEncoder.updateNeopixel(0,0,brightness);
+            hazeEncoder.updateNeopixel(0,0,brightness * rearLEDLevel / 255);
+            fanEncoder.updateNeopixel(0,0,brightness * frontLEDLevel / 255);
             break;
     }
+
+    hazeEncoder.showNeopixel();
+    fanEncoder.showNeopixel();
 
 
 

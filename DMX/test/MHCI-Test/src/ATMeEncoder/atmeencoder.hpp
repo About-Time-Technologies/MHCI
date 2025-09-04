@@ -25,6 +25,7 @@ public:
     bool getButtonState() { return buttonState; };
 
     bool updateNeopixel(const uint8_t r, const uint8_t g, const uint8_t b);
+    bool showNeopixel();
 
 private: 
     const char* TAG;

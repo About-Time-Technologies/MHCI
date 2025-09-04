@@ -53,8 +53,12 @@ bool ATMeEncoder::updateNeopixel(const uint8_t r, const uint8_t g, const uint8_t
 
     // Update the neopixel color
     hardwareNeopixel.setPixelColor(0, r, g, b);
-    hardwareNeopixel.show();
 
+    return true;
+}
+
+bool ATMeEncoder::showNeopixel() {
+    hardwareNeopixel.show();
     return true;
 }
 
