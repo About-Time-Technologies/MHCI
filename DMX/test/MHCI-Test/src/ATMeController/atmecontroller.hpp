@@ -6,7 +6,9 @@
 #include "DMXFixture/dmxfixture.hpp"
 #include "ATMeDisplay/atmedisplay.hpp"
 #include "ATMeDMX/atmedmx.hpp"
-#include <Encoder/encoder.hpp>
+#include "ATMeEncoder/atmeencoder.hpp"
+
+//#include <Encoder/encoder.hpp>
 
 
 class ATMeController {
@@ -23,8 +25,11 @@ private:
 
     bool triggerDisplayUpdate = false;
 
-    Encoder fan;
-    Encoder haze;
+    ATMeEncoder fanEncoder;
+    ATMeEncoder hazeEncoder;
+
+    // Encoder fan;
+    // Encoder haze;
 
 
     bool unitOn = true;
