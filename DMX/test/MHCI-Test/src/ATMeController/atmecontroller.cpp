@@ -192,9 +192,9 @@ std::string ATMeController::getInputStateString() {
         case ATMeInputState::INPUT_CONTROL:
             return "";
         case ATMeInputState::INPUT_ADDRESSES:
-            return "ADDRESS";
+            return "DMX ADDR";
         case ATMeInputState::INPUT_LEDs:
-            return "GLOW LED";
+            return "BLUE LED";
     }
     return "ERR";
 }

@@ -87,7 +87,7 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
     }
 
     display.setCursor(0,60);
-    centreText(display, atmeController.getInputStateString(), 64);
+    centreText(display, atmeController.getInputStateString(), 60);
 
     if (atmeController.unitOn) {
         display.fillRect(0, 78, 2, 2, SSD1327_WHITE);
