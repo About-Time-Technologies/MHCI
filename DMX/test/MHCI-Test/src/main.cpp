@@ -24,7 +24,6 @@ void setup() {
   atme = new ATMeController(&display, &dmx);
 
   atme->begin(millis());
-
 }
 
 void loop() {

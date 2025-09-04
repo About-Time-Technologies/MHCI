@@ -152,7 +152,12 @@ bool ATMeController::update(unsigned long now) {
             break;
     }
 
-    dmx->update(now, *this);
+
+    if (dmx->update(now, *this)) {
+        //ESP_LOGV(TAG, "DMX update successful");
+    } else {
+        ESP_LOGW(TAG, "DMX update failed");
+    }
 
     if (fanDelta || hazeDelta) triggerDisplayUpdate = true;
 

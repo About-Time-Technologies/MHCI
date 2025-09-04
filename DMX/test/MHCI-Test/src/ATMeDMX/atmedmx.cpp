@@ -215,6 +215,7 @@ std::string ATMeDMX::updateHazerStateString() {
     /* Oops! No RDM devices were found. Double-check your DMX connections and
       try again. */
     //Serial.printf("Could not find any RDM capable devices.\n");
+    ESP_LOGW(TAG, "No RDM devices found");
     return "MDG N/A";
   }
 

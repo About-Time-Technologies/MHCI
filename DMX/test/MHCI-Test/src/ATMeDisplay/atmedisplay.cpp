@@ -10,7 +10,7 @@ bool ATMeDisplay::begin(unsigned long now) {
     if(!display.begin(0x3C, true)) {
         //if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
         ESP_LOGW(this->TAG, "SSD1306 allocation failed");
-        for(;;); // Don't proceed, loop forever
+        //for(;;); // Don't proceed, loop forever
     }
 
     display.setRotation(0);
