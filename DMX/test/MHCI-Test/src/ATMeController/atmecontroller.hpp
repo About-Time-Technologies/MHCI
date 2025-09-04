@@ -47,6 +47,11 @@ public:
 
     ATMeInputState getInputState();
 
+    const uint PWM_CHANNEL = 0;
+    const uint PWM_FREQ = 500;
+    const uint PWM_RESOLUTION = 8;
+    
+
 private:
     const char* TAG;
     void nextState();

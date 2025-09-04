@@ -64,6 +64,14 @@ bool ATMeController::begin(unsigned long now) {
 
     loadAddresses();
 
+    ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+
+    ledcAttachPin(PWM1_PIN, PWM_CHANNEL);
+    ledcAttachPin(PWM2_PIN, PWM_CHANNEL + 1);
+
+    ledcWrite(PWM_CHANNEL, 0);
+    ledcWrite(PWM_CHANNEL+1, 0);
+
     return true;
 }
 
@@ -159,6 +167,9 @@ bool ATMeController::update(unsigned long now) {
     }
 
     display->update(now, false, *this);
+
+    ledcWrite(PWM_CHANNEL, frontLEDLevel);
+    ledcWrite(PWM_CHANNEL+1, rearLEDLevel);
 
     return true;
 }
