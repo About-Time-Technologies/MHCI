@@ -51,7 +51,6 @@ private:
     rdm_uid_t hazerUID;
 
     std::string hazerStateString = "BOOTING";
-
     
     std::string updateHazerStateString();
 

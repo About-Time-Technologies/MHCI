@@ -19,9 +19,16 @@ enum ATMeInputState {
     INPUT_CONTROL,
     INPUT_LEDs,
     INPUT_ADDRESSES,
-    INPUT_PURGE_HOLD,
-    INPUT_PURGE_ACTIVE,
-    COUNT
+    INPUT_COUNT
+};
+
+enum ATMeControlState {
+    CONTROL_OFF,
+    CONTROL_HEATING,
+    CONTROL_ON,
+    CONTROL_PURGE_REQUEST,
+    CONTROL_PURGE,
+    CONTROL_COUNT
 };
 
 class ATMeController {
@@ -43,9 +50,12 @@ public:
     uint8_t rearLEDLevel;
 
     std::string getATMeStateString();
+
     std::string getInputStateString();
+    std::string getControlStateString();
 
     ATMeInputState getInputState();
+    ATMeControlState getControlState();
 
     const uint PWM_CHANNEL = 0;
     const uint PWM_FREQ = 500;
@@ -54,7 +64,9 @@ public:
 
 private:
     const char* TAG;
-    void nextState();
+    void nextInputState();
+    void nextControlState();
+
     void saveAddresses();
     void loadAddresses();
 
@@ -70,7 +82,9 @@ private:
 
     ATMeEncoder fanEncoder;
     ATMeEncoder hazeEncoder;
+
     ATMeInputState inputState;
+    ATMeControlState controlState;
 
     bool hazeLongPress;
     bool fanLongPress;

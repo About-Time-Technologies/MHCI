@@ -5,17 +5,12 @@
 
 ATMeController::ATMeController(ATMeDisplay* _display, ATMeDMX* _dmx) :
     TAG("ATMeController"),
-    inputState(ATMeInputState::INPUT_CONTROL),
-    fanAddress(1),
-    fanValue(0),
-    hazeAddress(2),
-    unitOn(true),
-    hazeLevel(0),
-    hazeOn(true),
+    inputState(ATMeInputState::INPUT_CONTROL), controlState(ATMeControlState::CONTROL_OFF),
+    fanAddress(1), fanValue(0),
+    hazeAddress(2), unitOn(true), hazeLevel(0), hazeOn(true),
     dmx(_dmx),
     display(_display),
-    frontLEDLevel(0),
-    rearLEDLevel(0),
+    frontLEDLevel(0), rearLEDLevel(0),
     hazeLongPress(false), fanLongPress(false),
     menuTimeout(20000)
     {};
@@ -31,13 +26,12 @@ bool ATMeController::begin(unsigned long now) {
     fanEncoder.onButtonEvent(ButtonEvent::BUTTON_DOUBLE_PRESS, [this]() { 
         ESP_LOGD("Fan", "Double press"); 
 
-        this->nextState();
+        this->nextInputState();
     } );
     fanEncoder.onButtonEvent(ButtonEvent::BUTTON_LONG_PRESS_START, [this]() { 
         ESP_LOGD("Fan", "Long press"); 
         fanLongPress = true;
-        if (hazeLongPress) this->inputState = ATMeInputState::INPUT_PURGE_HOLD;
-        triggerDisplayUpdate;
+        if (hazeLongPress) this->nextControlState();
     } );
     fanEncoder.onButtonEvent(ButtonEvent::BUTTON_LONG_PRESS_END, [this]() { 
         ESP_LOGD("Fan", "Long press end"); 
@@ -48,14 +42,13 @@ bool ATMeController::begin(unsigned long now) {
     hazeEncoder.onButtonEvent(ButtonEvent::BUTTON_DOUBLE_PRESS, [this]() {
         ESP_LOGD("Haze", "Double press"); 
         
-        this->nextState();
+        this->nextInputState();
     } );
     hazeEncoder.onButtonEvent(ButtonEvent::BUTTON_LONG_PRESS_START, [this]() { 
         ESP_LOGD("Haze", "Long press"); 
         hazeLongPress = true;
         
-        if (fanLongPress) this->inputState = ATMeInputState::INPUT_PURGE_HOLD;
-        triggerDisplayUpdate;
+        if (fanLongPress) this->nextControlState();
     } );
     hazeEncoder.onButtonEvent(ButtonEvent::BUTTON_LONG_PRESS_END, [this]() { 
         ESP_LOGD("Haze", "Long press end"); 
@@ -82,9 +75,6 @@ bool ATMeController::update(unsigned long now) {
     if (fanDelta) ESP_LOGD(TAG, "Fan delta: %d", fanDelta);
     if (hazeDelta) ESP_LOGD(TAG, "Haze delta: %d", hazeDelta);
 
-    hazeOn = true;
-    if (ATMeInputState::INPUT_PURGE_ACTIVE == inputState) hazeOn = false;
-
     if (ATMeInputState::INPUT_ADDRESSES == inputState || ATMeInputState::INPUT_LEDs == inputState) {
         menuTimeout.startIfNotStarted(now);
 
@@ -108,31 +98,50 @@ bool ATMeController::update(unsigned long now) {
                 processLEDInputs(fanDelta, hazeDelta, fanEncoder.getButtonState(), hazeEncoder.getButtonState());
                 menuTimeout.start(now);
                 break;
-            case ATMeInputState::INPUT_PURGE_HOLD:
-                processControlInputs(fanDelta, hazeDelta, fanEncoder.getButtonState(), hazeEncoder.getButtonState());
-                break;
-            case ATMeInputState::INPUT_PURGE_ACTIVE:
-                processControlInputs(fanDelta, hazeDelta, fanEncoder.getButtonState(), hazeEncoder.getButtonState());
-                break;
         }
 
     }
 
     uint8_t brightness = 128;
 
+    hazeEncoder.updateNeopixel(0,0,0);
+    fanEncoder.updateNeopixel(0,0,0);
+
+
+
+    switch (controlState) {
+        case ATMeControlState::CONTROL_HEATING:
+            unitOn = true;
+            hazeOn = false;
+            hazeEncoder.updateNeopixel(brightness,brightness/2,0);
+            fanEncoder.updateNeopixel(brightness,brightness/2,0);
+            break;
+        case ATMeControlState::CONTROL_ON:
+            unitOn = true;
+            hazeOn = true;
+            hazeEncoder.updateNeopixel(0,brightness,0);
+            fanEncoder.updateNeopixel(0,brightness,0);
+            break;
+        case ATMeControlState::CONTROL_PURGE_REQUEST:
+            unitOn = true;
+            hazeOn = true;
+            hazeEncoder.updateNeopixel(brightness,0,brightness);
+            fanEncoder.updateNeopixel(brightness,0,brightness);
+            break;
+        case ATMeControlState::CONTROL_PURGE:
+            unitOn = true;
+            hazeOn = false;
+            hazeEncoder.updateNeopixel(brightness,0,0);
+            fanEncoder.updateNeopixel(brightness,0,0);
+            break;
+        case ATMeControlState::CONTROL_OFF:
+            unitOn = false;
+            hazeOn = false;
+            break;
+    }
+
     switch (inputState) {
         case ATMeInputState::INPUT_CONTROL:
-            if (!hazeEncoder.getButtonState()) {
-                hazeEncoder.updateNeopixel(0,brightness,0);
-            } else {
-                hazeEncoder.updateNeopixel(0,brightness,brightness/4);
-            }
-
-            if (!fanEncoder.getButtonState()) {
-                fanEncoder.updateNeopixel(0,brightness,0);
-            } else {
-                fanEncoder.updateNeopixel(0,brightness,brightness/4);
-            }
             break;
         case ATMeInputState::INPUT_ADDRESSES:
             hazeEncoder.updateNeopixel(brightness,brightness,0);
@@ -142,15 +151,8 @@ bool ATMeController::update(unsigned long now) {
             hazeEncoder.updateNeopixel(0,0,brightness);
             fanEncoder.updateNeopixel(0,0,brightness);
             break;
-        case ATMeInputState::INPUT_PURGE_HOLD:
-            hazeEncoder.updateNeopixel(brightness,0,brightness);
-            fanEncoder.updateNeopixel(brightness,0,brightness);
-            break;
-        case ATMeInputState::INPUT_PURGE_ACTIVE:
-            hazeEncoder.updateNeopixel(brightness,0,0);
-            fanEncoder.updateNeopixel(brightness,0,0);
-            break;
     }
+
 
 
     if (dmx->update(now, *this)) {
@@ -186,16 +188,29 @@ std::string ATMeController::getATMeStateString() {
 std::string ATMeController::getInputStateString() {
     switch(inputState) {
         case ATMeInputState::INPUT_CONTROL:
-            return "CONTROL";
+            return "";
         case ATMeInputState::INPUT_ADDRESSES:
             return "ADDRESS";
         case ATMeInputState::INPUT_LEDs:
-            return "GLOW";
-        case ATMeInputState::INPUT_PURGE_HOLD:
-            return "CONFIRM";
-        case ATMeInputState::INPUT_PURGE_ACTIVE:
-            return "PURGE";
+            return "GLOW LED";
     }
+    return "ERR";
+}
+
+std::string ATMeController::getControlStateString() {
+    switch (controlState) {
+        case ATMeControlState::CONTROL_OFF:
+            return "OFF";
+        case ATMeControlState::CONTROL_HEATING:
+            return "HEATING";
+        case ATMeControlState::CONTROL_ON:
+            return "ON";
+        case ATMeControlState::CONTROL_PURGE_REQUEST:
+            return "PURGE?";
+        case ATMeControlState::CONTROL_PURGE:
+            return "PURGING";
+    }
+
     return "ERR";
 }
 
@@ -203,18 +218,50 @@ ATMeInputState ATMeController::getInputState() {
     return inputState;
 }
 
-void ATMeController::nextState() {
-    uint8_t current = static_cast<uint8_t>(inputState);
-    uint8_t lastValidState = static_cast<uint8_t>(ATMeInputState::COUNT - 3);
-    uint8_t lastState = static_cast<uint8_t>(ATMeInputState::COUNT - 2);
+ATMeControlState ATMeController::getControlState() {
+    return controlState;
+}
 
-    if (current < lastValidState || current == lastState) {
+void ATMeController::nextInputState() {
+    uint8_t current = static_cast<uint8_t>(inputState);
+    uint8_t lastState = static_cast<uint8_t>(ATMeInputState::INPUT_COUNT - 1);
+
+    if (current < lastState) {
         inputState = static_cast<ATMeInputState>(current + 1);
     } else {
         inputState = ATMeInputState::INPUT_CONTROL;
     }
 
     triggerDisplayUpdate = true;
+}
+
+void ATMeController::nextControlState() {
+    // There are some states we can't manually progress on from.
+    // CONTROL_OFF, valid move
+    // CONTROL_HEATING, move to purge request, move to on happens automatically
+    // CONTROL_ON, valid move
+    // CONTROL_PURGE_REQUEST, valid move
+    // CONTROL_PURGE, move to heating, move to off happens automatically
+
+    switch(controlState) {
+        case ATMeControlState::CONTROL_OFF:
+            controlState = ATMeControlState::CONTROL_HEATING;
+            break;
+        case ATMeControlState::CONTROL_HEATING:
+            controlState = ATMeControlState::CONTROL_PURGE_REQUEST;
+            break;
+        case ATMeControlState::CONTROL_ON:
+            controlState = ATMeControlState::CONTROL_PURGE_REQUEST;
+            break;
+        case ATMeControlState::CONTROL_PURGE_REQUEST:
+            controlState = ATMeControlState::CONTROL_PURGE;
+            break;
+        case ATMeControlState::CONTROL_PURGE:
+            controlState = ATMeControlState::CONTROL_HEATING;
+            break;
+    }
+
+    triggerDisplayUpdate = true;  
 }
 
 int32_t ATMeController::constrainAddition(int32_t input, int32_t addition, int32_t min, int32_t max, int32_t nearest = 1) {
