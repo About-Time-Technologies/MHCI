@@ -10,6 +10,7 @@
 #include "ATMeDMX/atmedmx.hpp"
 #include "ATMeEncoder/atmeencoder.hpp"
 #include <stdint.h>
+#include <Preferences.h>
 
 class ATMeDisplay;
 class ATMeDMX;
@@ -35,11 +36,16 @@ public:
 
     uint16_t hazeAddress;
     bool unitOn;
-    uint hazeLevel;
+    uint8_t hazeLevel;
     bool hazeOn;
+
+    uint8_t frontLEDLevel;
+    uint8_t rearLEDLevel;
 
     std::string getATMeStateString();
     std::string getInputStateString();
+
+    ATMeInputState getInputState();
 
 private:
     const char* TAG;
@@ -49,6 +55,8 @@ private:
 
     int32_t constrainAddition(int32_t input, int32_t addition, int32_t min, int32_t max, int32_t nearest);
     void processControlInputs(int32_t fanDelta, int32_t hazeDelta, bool fanButton, bool hazeButton);
+    void processAddressInputs(int32_t fanDelta, int32_t hazeDelta, bool fanButton, bool hazeButton);
+    void processLEDInputs(int32_t fanDelta, int32_t hazeDelta, bool fanButton, bool hazeButton);
 
     ATMeDisplay* display;
     ATMeDMX* dmx;
@@ -58,4 +66,11 @@ private:
     ATMeEncoder fanEncoder;
     ATMeEncoder hazeEncoder;
     ATMeInputState inputState;
+
+    bool hazeLongPress;
+    bool fanLongPress;
+
+    Preferences preferences;
+
+    Timeout menuTimeout;
 };

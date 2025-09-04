@@ -36,5 +36,7 @@ private:
     bool displayInvert;
 
     void centreText(Adafruit_SSD1327 &display, const std::string text, int y);
+    void percentageValue(Adafruit_SSD1327 &display, const uint16_t percentage, int x, int y);
+    void dmxValue(Adafruit_SSD1327 &display, const uint16_t percentage, int x, int y);
 
 };

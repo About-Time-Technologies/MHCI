@@ -3,6 +3,8 @@
 #define LOG_LOCAL_LEVEL LOG_LEVEL
 #include "esp_log.h"
 
+#include <functional>
+
 enum ButtonEvent {
     BUTTON_PRESS_DOWN,
     BUTTON_PRESS_UP,
@@ -13,7 +15,8 @@ enum ButtonEvent {
     BUTTON_LONG_PRESS_END
 };
 
-typedef void (*ButtonCallback)();
+//typedef void (*ButtonCallback)();
+typedef std::function<void()> ButtonCallback;
 
 class VirtualButton {
 public:

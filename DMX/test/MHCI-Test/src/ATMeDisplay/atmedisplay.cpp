@@ -59,38 +59,63 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
 
     display.setTextColor(SSD1327_WHITE);        // Draw white text
 
-    display.setCursor(14,textY);
-    display.print("FAN");
+    switch (atmeController.getInputState()) {
+        case ATMeInputState::INPUT_LEDs:
+            display.setCursor(8,textY);
+            display.print("FRONT");
 
-    uint8_t fanValue = uint8_t(map(atmeController.fanValue, 0, 255, 0, 100));
+            display.setCursor(rightX,textY);  
+            display.print("REAR");
 
-    if(fanValue < 10) {
-        display.setCursor(leftX + 24,outputY);             // Start at top-left corner
-    } else if (fanValue < 100) {
-        display.setCursor(leftX + 12,outputY);             
-    } else {
-        display.setCursor(leftX,outputY);             
+            percentageValue(display, uint8_t(map(atmeController.frontLEDLevel, 0, 255, 0, 100)), leftX, outputY);
+
+            percentageValue(display, uint8_t(map(atmeController.rearLEDLevel, 0, 255, 0, 100)), rightX, outputY);
+            break;
+        case ATMeInputState::INPUT_ADDRESSES:
+            display.setCursor(14,textY);
+            display.print("FAN");
+
+            display.setCursor(rightX,textY);  
+            display.print("HAZE");
+
+            dmxValue(display, atmeController.fanAddress, 14 , outputY);
+            dmxValue(display, atmeController.hazeAddress, rightX + 6, outputY);
+            break;
+        default:
+            display.setCursor(14,textY);
+            display.print("FAN");
+
+            display.setCursor(rightX,textY);  
+            display.print("HAZE");
+
+            uint8_t fanValue = uint8_t(map(atmeController.fanValue, 0, 255, 0, 100));
+            percentageValue(display, fanValue, leftX, outputY);
+
+            uint8_t hazeValue = uint8_t(map(atmeController.hazeLevel, 0, 255, 0, 100));
+            percentageValue(display, hazeValue, rightX, outputY);
+            break;
     }
-    display.printf("%d%%\n", fanValue);
-
-    display.setCursor(rightX,textY);  
-    display.print("HAZE");
-
-    display.setCursor(rightX,outputY);             // Start at top-left corner
-
-    uint8_t hazeValue = uint8_t(map(atmeController.hazeLevel, 0, 255, 0, 100));
-    if(hazeValue < 10) {
-        display.setCursor(rightX + 24,outputY);             // Start at top-left corner
-    } else if (hazeValue < 100) {
-        display.setCursor(rightX + 12,outputY);             
-    } else {
-        display.setCursor(rightX,outputY);             
-    }
-    display.printf("%d%%\n", hazeValue);
 
     display.setCursor(0,60);
+    centreText(display, atmeController.getInputStateString(), 64);
+    if (atmeController.getInputStateString() == "CONFIRM") {
+        centreText(display, "PURGE", 80);
+    } else {
+        centreText(display, "MODE", 80);
+    }
 
-    centreText(display, atmeController.getInputStateString(), 68);
+    uint8_t maxHeight = 35;
+    uint8_t leftLength = uint8_t(map(atmeController.frontLEDLevel,0,255,0,maxHeight));
+    if (atmeController.frontLEDLevel == 0) leftLength = 0;
+
+    display.fillRect(0, 96, 4, -leftLength, SSD1327_WHITE);
+
+
+
+    uint8_t rightLength = uint8_t(map(atmeController.rearLEDLevel,0,255,0,maxHeight));
+    if (atmeController.rearLEDLevel == 0) leftLength = 0;
+
+    display.fillRect(SCREEN_HEIGHT - 4, 96, 4, -rightLength, SSD1327_WHITE);
 
     display.display();
 
@@ -101,4 +126,28 @@ void ATMeDisplay::centreText(Adafruit_SSD1327 &display, const std::string text, 
     int16_t x = ((128 - text.length() * 12) / 2);
     display.setCursor(x, y);
     display.printf(text.c_str());
+}
+
+void ATMeDisplay::percentageValue(Adafruit_SSD1327 &display, const uint16_t percentage, int x, int y) {
+    if(percentage < 10) {
+        display.setCursor(x + 24,y);             // Start at top-left corner
+    } else if (percentage < 100) {
+        display.setCursor(x + 12,y);             
+    } else {
+        display.setCursor(x,y);             
+    }
+    display.printf("%d%%\n", percentage);
+}
+
+void ATMeDisplay::dmxValue(Adafruit_SSD1327 &display, const uint16_t dmx, int x, int y) {
+    display.setCursor(x, y);
+
+    if(dmx < 10) {
+        display.printf("00%d\n", dmx);
+    } else if (dmx < 100) {
+        display.printf("0%d\n", dmx);            
+    } else {
+        display.printf("%d\n", dmx);            
+    }
+    
 }
