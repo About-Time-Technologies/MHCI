@@ -55,7 +55,6 @@ private:
     bool findHazer();
 
     std::string hazerStateString = "BOOTING";
-
     
     std::string updateHazerStateString();
 

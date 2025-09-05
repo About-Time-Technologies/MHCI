@@ -39,25 +39,15 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
     uint8_t leftX = 6;
     uint8_t rightX = 74;
 
-    uint16_t topBackgroundColor = SSD1327_WHITE;
-    uint16_t topTextColor = SSD1327_BLACK;
-
-    bool errorState = false;
-    if (errorState && flashingDisplay.checkTimeoutAndRestart(millis())) {
-        displayInvert = !displayInvert; // Toggle the display invert state
-    }
-
-    if (displayInvert) {
-    topBackgroundColor = SSD1327_BLACK;
-    topTextColor = SSD1327_WHITE;
-    }
-
-    display.fillRect(0, 0, SCREEN_HEIGHT, 16, topBackgroundColor); // Draw a border around the display
-    //display.fillRect(SCREEN_HEIGHT/2 - lineWidth/2, 0, lineWidth, SCREEN_WIDTH, SH110X_WHITE); 
-    display.setTextColor(topTextColor);        // Draw white text
+    display.fillRect(0, 0, SCREEN_HEIGHT, 16, SSD1327_WHITE); // Draw a border around the display
+    display.setTextColor(SSD1327_BLACK); // Draw white text
     centreText(display, atmeController.getATMeStateString(), 1); // Center the generator state text
 
-    display.setTextColor(SSD1327_WHITE);        // Draw white text
+    display.fillRect(0, 96-16, SCREEN_HEIGHT, 16, SSD1327_WHITE); // Draw a border around the display
+    display.setTextColor(SSD1327_BLACK); // Draw white text
+    centreText(display, atmeController.getControlStateString(), 96-15); // Center the generator state text
+
+    display.setTextColor(SSD1327_WHITE); // Draw white text
 
     switch (atmeController.getInputState()) {
         case ATMeInputState::INPUT_LEDs:
@@ -81,41 +71,45 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
             dmxValue(display, atmeController.fanAddress, 14 , outputY);
             dmxValue(display, atmeController.hazeAddress, rightX + 6, outputY);
             break;
-        default:
-            display.setCursor(14,textY);
+        case ATMeInputState::INPUT_CONTROL:
+            display.setCursor(14,textY + 10);
             display.print("FAN");
 
-            display.setCursor(rightX,textY);  
+            display.setCursor(rightX,textY + 10);  
             display.print("HAZE");
 
             uint8_t fanValue = uint8_t(map(atmeController.fanValue, 0, 255, 0, 100));
-            percentageValue(display, fanValue, leftX, outputY);
+            percentageValue(display, fanValue, leftX, outputY + 10);
 
             uint8_t hazeValue = uint8_t(map(atmeController.hazeLevel, 0, 255, 0, 100));
-            percentageValue(display, hazeValue, rightX, outputY);
+            percentageValue(display, hazeValue, rightX, outputY + 10);
             break;
     }
 
     display.setCursor(0,60);
-    centreText(display, atmeController.getInputStateString(), 64);
-    if (atmeController.getInputStateString() == "CONFIRM") {
-        centreText(display, "PURGE", 80);
-    } else {
-        centreText(display, "MODE", 80);
+    centreText(display, atmeController.getInputStateString(), 60);
+
+    if (atmeController.unitOn) {
+        display.fillRect(0, 78, 2, 2, SSD1327_WHITE);
     }
 
-    uint8_t maxHeight = 35;
-    uint8_t leftLength = uint8_t(map(atmeController.frontLEDLevel,0,255,0,maxHeight));
-    if (atmeController.frontLEDLevel == 0) leftLength = 0;
+    if (atmeController.hazeOn) {
+        display.fillRect(128-2, 78, 2, 2, SSD1327_WHITE);
+    }
+    
+    // uint8_t maxHeight = 35;
 
-    display.fillRect(0, 96, 4, -leftLength, SSD1327_WHITE);
+    // if (atmeController.frontLEDLevel > 0) {
+    //     uint8_t leftLength = uint8_t(map(atmeController.frontLEDLevel,0,255,0,maxHeight));
 
+    //     display.fillRect(0, 80, 4, -leftLength, SSD1327_WHITE);
+    // }
 
+    // if (atmeController.rearLEDLevel > 0) {
+    //     uint8_t rightLength = uint8_t(map(atmeController.rearLEDLevel,0,255,0,maxHeight));
 
-    uint8_t rightLength = uint8_t(map(atmeController.rearLEDLevel,0,255,0,maxHeight));
-    if (atmeController.rearLEDLevel == 0) leftLength = 0;
-
-    display.fillRect(SCREEN_HEIGHT - 4, 96, 4, -rightLength, SSD1327_WHITE);
+    //     display.fillRect(SCREEN_HEIGHT - 4, 80, 4, -rightLength, SSD1327_WHITE);
+    // }
 
     display.display();
 
