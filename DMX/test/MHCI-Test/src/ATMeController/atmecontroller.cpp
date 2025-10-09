@@ -117,13 +117,13 @@ bool ATMeController::update(unsigned long now) {
             break;
         case ATMeControlState::CONTROL_ON:
             unitOn = true;
-            hazeOn = true;
+            hazeOn = this->hazeLevel > 0;
             hazeEncoder.updateNeopixel(0,brightness,0);
             fanEncoder.updateNeopixel(0,brightness,0);
             break;
         case ATMeControlState::CONTROL_PURGE_REQUEST:
             unitOn = true;
-            hazeOn = true;
+            hazeOn = this->hazeLevel > 0;
             hazeEncoder.updateNeopixel(brightness,0,brightness);
             fanEncoder.updateNeopixel(brightness,0,brightness);
             break;
