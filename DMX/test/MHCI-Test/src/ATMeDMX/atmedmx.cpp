@@ -38,13 +38,14 @@ bool ATMeDMX::update(unsigned long now, ATMeController& atmeController) {
   assert(atmeController.hazeAddress <= 510);
 
   unitOn.address = atmeController.hazeAddress;
-  unitOn.value = atmeController.unitOn ? 255 : 0;
+  unitOn.value = atmeController.unitOn ? 191 : 63;
   
   hazeLevel.address = atmeController.hazeAddress + 1;
   hazeLevel.value = atmeController.hazeLevel;
 
   hazeOn.address = atmeController.hazeAddress + 2;
-  hazeOn.value = atmeController.hazeOn ? 255 : 0;
+  hazeOn.value = atmeController.hazeOn ? 192 : 0;
+
 
   if (rdmUpdate.checkTimeoutAndRestart(now)) {
     hazerStateString = updateHazerStateString();
