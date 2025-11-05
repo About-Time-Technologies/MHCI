@@ -5,7 +5,7 @@
 
 ATMeController::ATMeController(ATMeDisplay* _display, ATMeDMX* _dmx) :
     TAG("ATMeController"),
-    inputState(ATMeInputState::INPUT_CONTROL), controlState(ATMeControlState::CONTROL_OFF),
+    inputState(ATMeInputState::INPUT_CONTROL), controlState(ATMeControlState::CONTROL_ON),
     fanAddress(1), fanValue(0),
     hazeAddress(2), unitOn(true), hazeLevel(0), hazeOn(true),
     dmx(_dmx),
@@ -109,33 +109,17 @@ bool ATMeController::update(unsigned long now) {
 
 
     switch (controlState) {
-        case ATMeControlState::CONTROL_HEATING:
-            unitOn = true;
-            hazeOn = false;
-            hazeEncoder.updateNeopixel(brightness,brightness/3,0);
-            fanEncoder.updateNeopixel(brightness,brightness/3,0);
-            break;
         case ATMeControlState::CONTROL_ON:
             unitOn = true;
             hazeOn = this->hazeLevel > 0;
             hazeEncoder.updateNeopixel(0,brightness,0);
             fanEncoder.updateNeopixel(0,brightness,0);
             break;
-        case ATMeControlState::CONTROL_PURGE_REQUEST:
-            unitOn = true;
-            hazeOn = this->hazeLevel > 0;
-            hazeEncoder.updateNeopixel(brightness,0,brightness);
-            fanEncoder.updateNeopixel(brightness,0,brightness);
-            break;
-        case ATMeControlState::CONTROL_PURGE:
-            unitOn = true;
-            hazeOn = false;
-            hazeEncoder.updateNeopixel(brightness,0,0);
-            fanEncoder.updateNeopixel(brightness,0,0);
-            break;
         case ATMeControlState::CONTROL_OFF:
             unitOn = false;
             hazeOn = false;
+            hazeEncoder.updateNeopixel(brightness,0,0);
+            fanEncoder.updateNeopixel(brightness,0,0);
             break;
     }
 
@@ -163,30 +147,11 @@ bool ATMeController::update(unsigned long now) {
         ESP_LOGW(TAG, "DMX update failed");
     }
 
-    if (dmx->hazerStateChanged) {
-        std::string hazerStateString = dmx->getHazerStateString();
-        switch (controlState) {
-            case ATMeControlState::CONTROL_HEATING:
-                if (hazerStateString == "HAZE READY" || hazerStateString == "HAZE ON") controlState = ATMeControlState::CONTROL_ON;
-                break;
-            case ATMeControlState::CONTROL_ON:
-                if (hazerStateString == "HAZE OFF") controlState = ATMeControlState::CONTROL_OFF;
-                break;
-            case ATMeControlState::CONTROL_PURGE_REQUEST:
-                break;
-            case ATMeControlState::CONTROL_PURGE:
-                if (hazerStateString == "HAZE OFF") controlState = ATMeControlState::CONTROL_OFF;
-                break;
-            case ATMeControlState::CONTROL_OFF:
-                break;
-        }
-    }
-
     if (fanDelta || hazeDelta) triggerDisplayUpdate = true;
 
     bool displayAlert = false;
 
-    if (dmx->getHazerStateString() == "PURGING") {
+    if (dmx->getHazerStateString() == "PURGING" || dmx->getHazerStateString() == "MDG N/A" || this->controlState == ATMeControlState::CONTROL_OFF) {
         displayAlert = true;
     }
 
@@ -226,14 +191,8 @@ std::string ATMeController::getControlStateString() {
     switch (controlState) {
         case ATMeControlState::CONTROL_OFF:
             return "OFF";
-        case ATMeControlState::CONTROL_HEATING:
-            return "HEATING";
         case ATMeControlState::CONTROL_ON:
             return "ON";
-        case ATMeControlState::CONTROL_PURGE_REQUEST:
-            return "PURGE?";
-        case ATMeControlState::CONTROL_PURGE:
-            return "PURGING";
     }
 
     return "ERR";
@@ -261,28 +220,12 @@ void ATMeController::nextInputState() {
 }
 
 void ATMeController::nextControlState() {
-    // There are some states we can't manually progress on from.
-    // CONTROL_OFF, valid move
-    // CONTROL_HEATING, move to purge request, move to on happens automatically
-    // CONTROL_ON, valid move
-    // CONTROL_PURGE_REQUEST, valid move
-    // CONTROL_PURGE, move to heating, move to off happens automatically
-
     switch(controlState) {
         case ATMeControlState::CONTROL_OFF:
-            controlState = ATMeControlState::CONTROL_HEATING;
-            break;
-        case ATMeControlState::CONTROL_HEATING:
-            controlState = ATMeControlState::CONTROL_PURGE_REQUEST;
+            controlState = ATMeControlState::CONTROL_ON;
             break;
         case ATMeControlState::CONTROL_ON:
-            controlState = ATMeControlState::CONTROL_PURGE_REQUEST;
-            break;
-        case ATMeControlState::CONTROL_PURGE_REQUEST:
-            controlState = ATMeControlState::CONTROL_PURGE;
-            break;
-        case ATMeControlState::CONTROL_PURGE:
-            controlState = ATMeControlState::CONTROL_HEATING;
+            controlState = ATMeControlState::CONTROL_OFF;
             break;
     }
 

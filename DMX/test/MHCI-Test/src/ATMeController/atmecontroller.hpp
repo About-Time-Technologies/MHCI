@@ -24,10 +24,7 @@ enum ATMeInputState {
 
 enum ATMeControlState {
     CONTROL_OFF,
-    CONTROL_HEATING,
     CONTROL_ON,
-    CONTROL_PURGE_REQUEST,
-    CONTROL_PURGE,
     CONTROL_COUNT
 };
 

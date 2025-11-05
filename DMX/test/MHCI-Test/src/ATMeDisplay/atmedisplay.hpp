@@ -13,13 +13,14 @@
 
 class ATMeController;
 
+
 class ATMeDisplay {
 public:
     ATMeDisplay() : 
         display(128, 128, &Wire, -1, 1000000), 
-        flashingDisplay(500),
+        flashingDisplayTimeout(500),
         displayUpdate(250),
-        displayInvert(false),
+        flashingBackgroundColour(true),
         TAG("ATMeDisplay") {};
 
     ~ATMeDisplay() {};
@@ -31,11 +32,12 @@ private:
     const char* TAG;
     Adafruit_SSD1327 display;
 
-    Timeout flashingDisplay;
+    Timeout flashingDisplayTimeout;
     Timeout displayUpdate;
-    bool displayInvert;
+    bool flashingBackgroundColour; // White = 1, black = 0
 
-    void centreText(Adafruit_SSD1327 &display, const std::string text, int y);
+    void drawStateGraphics(Adafruit_SSD1327 &display, ATMeController& atmeController, uint16_t backgroundColour, uint16_t textColour);
+    void drawCentredText(Adafruit_SSD1327 &display, const std::string text, int y);
     void percentageValue(Adafruit_SSD1327 &display, const uint16_t percentage, int x, int y);
     void dmxValue(Adafruit_SSD1327 &display, const uint16_t percentage, int x, int y);
 

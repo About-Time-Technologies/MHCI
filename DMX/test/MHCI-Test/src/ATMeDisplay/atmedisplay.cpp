@@ -18,7 +18,7 @@ bool ATMeDisplay::begin(unsigned long now) {
     display.display();
 
     displayUpdate.start(now);
-    flashingDisplay.start(now);
+    flashingDisplayTimeout.start(now);
 
     ESP_LOGD(this->TAG, "Initialised");
     return true;
@@ -39,29 +39,17 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
     uint8_t leftX = 6;
     uint8_t rightX = 74;
 
-    if (alert && flashingDisplay.checkTimeoutAndRestart(now)) {
-        displayInvert != displayInvert;
-    } else {
-        displayInvert = false;
+    if (flashingDisplayTimeout.checkTimeoutAndRestart(now)) {
+        flashingBackgroundColour != flashingBackgroundColour;
     }
 
-    if (displayInvert) {
-        display.fillRect(0, 0, SCREEN_HEIGHT, 16, SSD1327_BLACK); // Draw a border around the display
-        display.setTextColor(SSD1327_WHITE); // Draw white text
+    if (alert) {
+        drawStateGraphics(display, atmeController, SSD1327_WHITE && flashingBackgroundColour, SSD1327_WHITE && !flashingBackgroundColour);
     } else {
-        display.fillRect(0, 0, SCREEN_HEIGHT, 16, SSD1327_WHITE); // Draw a border around the display
-        display.setTextColor(SSD1327_BLACK); // Draw white text
+        drawStateGraphics(display, atmeController, SSD1327_WHITE, SSD1327_BLACK);
     }
-
-
-    centreText(display, atmeController.getATMeStateString(), 1); // Center the generator state text
-
-    display.fillRect(0, 96-16, SCREEN_HEIGHT, 16, SSD1327_WHITE); // Draw a border around the display
-    display.setTextColor(SSD1327_BLACK); // Draw white text
-    centreText(display, atmeController.getControlStateString(), 96-15); // Center the generator state text
 
     display.setTextColor(SSD1327_WHITE); // Draw white text
-
     switch (atmeController.getInputState()) {
         case ATMeInputState::INPUT_LEDs:
             display.setCursor(8,textY);
@@ -100,7 +88,7 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
     }
 
     display.setCursor(0,60);
-    centreText(display, atmeController.getInputStateString(), 60);
+    drawCentredText(display, atmeController.getInputStateString(), 60);
 
     if (atmeController.unitOn) {
         display.fillRect(0, 78, 2, 2, SSD1327_WHITE);
@@ -129,7 +117,19 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
     return true;
 }
 
-void ATMeDisplay::centreText(Adafruit_SSD1327 &display, const std::string text, int y) {
+void ATMeDisplay::drawStateGraphics(Adafruit_SSD1327 &display, ATMeController& atmeController, uint16_t backgroundColour, uint16_t textColour) {
+
+    display.fillRect(0, 0, SCREEN_HEIGHT, 16, backgroundColour); // Draw a border around the display
+    display.setTextColor(textColour); 
+
+    drawCentredText(display, atmeController.getATMeStateString(), 1); // Center the generator state text
+
+    display.fillRect(0, 96-16, SCREEN_HEIGHT, 16, backgroundColour); // Draw a border around the display
+    
+    drawCentredText(display, atmeController.getControlStateString(), 96-15); // Center the generator state text
+}
+
+void ATMeDisplay::drawCentredText(Adafruit_SSD1327 &display, const std::string text, int y) {
     int16_t x = ((128 - text.length() * 12) / 2);
     display.setCursor(x, y);
     display.printf(text.c_str());
