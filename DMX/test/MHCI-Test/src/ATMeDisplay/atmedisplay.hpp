@@ -25,7 +25,7 @@ public:
     ~ATMeDisplay() {};
 
     bool begin(unsigned long now);
-    bool update(unsigned long now, bool forceUpdate, ATMeController& atmeController);
+    bool update(unsigned long now, bool forceUpdate, ATMeController& atmeController, bool alert);
 
 private:
     const char* TAG;

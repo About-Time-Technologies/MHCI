@@ -7,7 +7,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max) {
 
 bool ATMeDisplay::begin(unsigned long now) {
     //SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-    if(!display.begin(0x3C, true)) {
+    if(!display.begin(0x3D, true)) {
         //if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
         ESP_LOGW(this->TAG, "SSD1306 allocation failed");
         //for(;;); // Don't proceed, loop forever
@@ -24,7 +24,7 @@ bool ATMeDisplay::begin(unsigned long now) {
     return true;
 };
 
-bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& atmeController) {
+bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& atmeController, bool alert) {
     if (!forceUpdate && !displayUpdate.checkTimeoutAndRestart(now)) return false;
 
     
@@ -39,8 +39,21 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
     uint8_t leftX = 6;
     uint8_t rightX = 74;
 
-    display.fillRect(0, 0, SCREEN_HEIGHT, 16, SSD1327_WHITE); // Draw a border around the display
-    display.setTextColor(SSD1327_BLACK); // Draw white text
+    if (alert && flashingDisplay.checkTimeoutAndRestart(now)) {
+        displayInvert != displayInvert;
+    } else {
+        displayInvert = false;
+    }
+
+    if (displayInvert) {
+        display.fillRect(0, 0, SCREEN_HEIGHT, 16, SSD1327_BLACK); // Draw a border around the display
+        display.setTextColor(SSD1327_WHITE); // Draw white text
+    } else {
+        display.fillRect(0, 0, SCREEN_HEIGHT, 16, SSD1327_WHITE); // Draw a border around the display
+        display.setTextColor(SSD1327_BLACK); // Draw white text
+    }
+
+
     centreText(display, atmeController.getATMeStateString(), 1); // Center the generator state text
 
     display.fillRect(0, 96-16, SCREEN_HEIGHT, 16, SSD1327_WHITE); // Draw a border around the display

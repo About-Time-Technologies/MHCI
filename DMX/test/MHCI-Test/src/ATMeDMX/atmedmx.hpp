@@ -31,6 +31,7 @@ public:
 
     std::string getHazerStateString();
 
+    bool hazerStateChanged = false;
 
 private:
     const char* TAG;

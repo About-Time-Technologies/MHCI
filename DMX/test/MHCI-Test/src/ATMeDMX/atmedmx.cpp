@@ -48,8 +48,14 @@ bool ATMeDMX::update(unsigned long now, ATMeController& atmeController) {
 
 
   if (rdmUpdate.checkTimeoutAndRestart(now)) {
+    hazerStateChanged = false;
+    std::string oldHazerStateString = hazerStateString;
     hazerStateString = updateHazerStateString();
     ESP_LOGD(TAG, "Hazer state: %s", hazerStateString.c_str());
+
+    if (oldHazerStateString != hazerStateString) {
+      hazerStateChanged = true;
+    }
   }
 
   if (dmxUpdate.checkTimeoutAndRestart(now)) {

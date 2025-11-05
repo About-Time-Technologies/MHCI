@@ -163,19 +163,42 @@ bool ATMeController::update(unsigned long now) {
         ESP_LOGW(TAG, "DMX update failed");
     }
 
+    if (dmx->hazerStateChanged) {
+        std::string hazerStateString = dmx->getHazerStateString();
+        switch (controlState) {
+            case ATMeControlState::CONTROL_HEATING:
+                if (hazerStateString == "HAZE READY" || hazerStateString == "HAZE ON") controlState = ATMeControlState::CONTROL_ON;
+                break;
+            case ATMeControlState::CONTROL_ON:
+                if (hazerStateString == "HAZE OFF") controlState = ATMeControlState::CONTROL_OFF;
+                break;
+            case ATMeControlState::CONTROL_PURGE_REQUEST:
+                break;
+            case ATMeControlState::CONTROL_PURGE:
+                if (hazerStateString == "HAZE OFF") controlState = ATMeControlState::CONTROL_OFF;
+                break;
+            case ATMeControlState::CONTROL_OFF:
+                break;
+        }
+    }
+
     if (fanDelta || hazeDelta) triggerDisplayUpdate = true;
 
+    bool displayAlert = false;
 
+    if (dmx->getHazerStateString() == "PURGING") {
+        displayAlert = true;
+    }
 
     if (triggerDisplayUpdate) {
         triggerDisplayUpdate = false; // Reset the flag after updating the display
-        display->update(now, true, *this);
+        display->update(now, true, *this, displayAlert);
 
         fanEncoder.updateNeopixel(fanValue,0,0);
         hazeEncoder.updateNeopixel(0,hazeLevel,0);
     }
 
-    display->update(now, false, *this);
+    display->update(now, false, *this, displayAlert);
 
     ledcWrite(PWM_CHANNEL, frontLEDLevel);
     ledcWrite(PWM_CHANNEL+1, rearLEDLevel);
