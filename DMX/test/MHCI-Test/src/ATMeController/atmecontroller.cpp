@@ -149,21 +149,26 @@ bool ATMeController::update(unsigned long now) {
 
     if (fanDelta || hazeDelta) triggerDisplayUpdate = true;
 
-    bool displayAlert = false;
+    bool atmeAlert = false;
+    bool controlAlert = false;
 
-    if (dmx->getHazerStateString() == "PURGING" || dmx->getHazerStateString() == "MDG N/A" || this->controlState == ATMeControlState::CONTROL_OFF) {
-        displayAlert = true;
+    if (dmx->getHazerStateString() == "PURGING" || dmx->getHazerStateString() == "MDG N/A") {
+        atmeAlert = true;
+    }
+
+    if (this->controlState == ATMeControlState::CONTROL_OFF) {
+        controlAlert = true;
     }
 
     if (triggerDisplayUpdate) {
         triggerDisplayUpdate = false; // Reset the flag after updating the display
-        display->update(now, true, *this, displayAlert);
+        display->update(now, true, *this, atmeAlert, controlAlert);
 
         fanEncoder.updateNeopixel(fanValue,0,0);
         hazeEncoder.updateNeopixel(0,hazeLevel,0);
     }
 
-    display->update(now, false, *this, displayAlert);
+    display->update(now, false, *this, atmeAlert, controlAlert);
 
     ledcWrite(PWM_CHANNEL, frontLEDLevel);
     ledcWrite(PWM_CHANNEL+1, rearLEDLevel);

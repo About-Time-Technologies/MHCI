@@ -24,7 +24,7 @@ bool ATMeDisplay::begin(unsigned long now) {
     return true;
 };
 
-bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& atmeController, bool alert) {
+bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& atmeController, bool atmeAlert, bool controlAlert) {
     if (!forceUpdate && !displayUpdate.checkTimeoutAndRestart(now)) return false;
 
     
@@ -40,13 +40,32 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
     uint8_t rightX = 74;
 
     if (flashingDisplayTimeout.checkTimeoutAndRestart(now)) {
-        flashingBackgroundColour != flashingBackgroundColour;
+        if (flashingBackgroundColour) {
+            flashingBackgroundColour = false;
+        } else {
+            flashingBackgroundColour = true;
+        }
+        ESP_LOGD(TAG, "Toggling background colour, %d", flashingBackgroundColour);
     }
 
-    if (alert) {
-        drawStateGraphics(display, atmeController, SSD1327_WHITE && flashingBackgroundColour, SSD1327_WHITE && !flashingBackgroundColour);
+    if (atmeAlert) {
+        if (flashingBackgroundColour) {
+            drawATMeStateGraphics(display, atmeController, SSD1327_WHITE, SSD1327_BLACK);
+        } else {
+            drawATMeStateGraphics(display, atmeController, SSD1327_BLACK, SSD1327_WHITE);
+        }
     } else {
-        drawStateGraphics(display, atmeController, SSD1327_WHITE, SSD1327_BLACK);
+        drawATMeStateGraphics(display, atmeController, SSD1327_WHITE, SSD1327_BLACK);
+    }
+
+    if (controlAlert) {
+        if (flashingBackgroundColour) {
+            drawControlStateGraphics(display, atmeController, SSD1327_WHITE, SSD1327_BLACK);
+        } else {
+            drawControlStateGraphics(display, atmeController, SSD1327_BLACK, SSD1327_WHITE);
+        }
+    } else {
+        drawControlStateGraphics(display, atmeController, SSD1327_WHITE, SSD1327_BLACK);
     }
 
     display.setTextColor(SSD1327_WHITE); // Draw white text
@@ -117,14 +136,18 @@ bool ATMeDisplay::update(unsigned long now, bool forceUpdate, ATMeController& at
     return true;
 }
 
-void ATMeDisplay::drawStateGraphics(Adafruit_SSD1327 &display, ATMeController& atmeController, uint16_t backgroundColour, uint16_t textColour) {
+void ATMeDisplay::drawATMeStateGraphics(Adafruit_SSD1327 &display, ATMeController& atmeController, uint16_t backgroundColour, uint16_t textColour) {
+    display.fillRect(0, 0, SCREEN_HEIGHT, 16, backgroundColour); // Draw a border around the text
 
-    display.fillRect(0, 0, SCREEN_HEIGHT, 16, backgroundColour); // Draw a border around the display
     display.setTextColor(textColour); 
 
     drawCentredText(display, atmeController.getATMeStateString(), 1); // Center the generator state text
+}
 
-    display.fillRect(0, 96-16, SCREEN_HEIGHT, 16, backgroundColour); // Draw a border around the display
+void ATMeDisplay::drawControlStateGraphics(Adafruit_SSD1327 &display, ATMeController& atmeController, uint16_t backgroundColour, uint16_t textColour) {
+    display.setTextColor(textColour); 
+
+    display.fillRect(0, 96-16, SCREEN_HEIGHT, 16, backgroundColour); // Draw a border around the text
     
     drawCentredText(display, atmeController.getControlStateString(), 96-15); // Center the generator state text
 }
